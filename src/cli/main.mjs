@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { auditInstalled, auditSource } from "../audit/audit.mjs";
 import { compareInstalled } from "../compare/compare.mjs";
 import { HARD_LIMITS } from "../config/limits.mjs";
+import { getMarketplace } from "../marketplace/index.mjs";
 import { ReceiptVerifyError, verifyReceipt } from "../receipt/verify.mjs";
 import { renderJson } from "../render/json.mjs";
 import { renderMarkdown } from "../render/markdown.mjs";
@@ -79,6 +80,26 @@ export async function main(argv, io = {}) {
 	}
 	const parsed = parseCommonArguments(argv.slice(1), positionalCounts[command]);
 	if (parsed.error !== null) return usageError(stderr, parsed.error);
+	if (command === "marketplace-collisions") {
+		try {
+			const marketplaceData = await getMarketplace({
+				fetch: io.fetch,
+				signal: io.signal,
+				limits: parsed.options.limits,
+				offline: parsed.options.offline === true,
+			});
+			const collisions = findDuplicateIds(marketplaceData);
+			const format = parsed.options.format ?? "terminal";
+			const output = renderCollisions(collisions, format);
+			if (parsed.options.output === undefined) stdout.write(output);
+			else await writeAtomic(parsed.options.output, output, io.cwd);
+			return EXIT.OK;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			stderr.write(`herdr-xray: marketplace-collisions failed: ${message}\n`);
+			return EXIT.INCOMPLETE;
+		}
+	}
 	if (
 		command !== "audit" &&
 		command !== "audit-installed" &&
@@ -101,6 +122,9 @@ export async function main(argv, io = {}) {
 			spawn: io.spawn,
 			env: io.env,
 			herdrBinPath: io.herdrBinPath,
+			marketplaceCheck: parsed.options.marketplaceCheck ?? "off",
+			offline: parsed.options.offline === true,
+			persist: true,
 		};
 		const receipt = await run(command, parsed.positionals, auditOptions);
 		if (
@@ -194,6 +218,8 @@ function normalizedOptions(raw) {
 		requireComplete: raw.has("--require-complete"),
 		failOnUnknown: raw.has("--fail-on-unknown"),
 		failOnSeverity: raw.get("--fail-on-severity"),
+		marketplaceCheck: raw.get("--marketplace-check"),
+		offline: raw.has("--offline") ? true : undefined,
 		limits,
 	};
 }
@@ -279,6 +305,33 @@ function usageError(stderr, message) {
 	return EXIT.USAGE;
 }
 function notImplemented(stderr, command) {
-	stderr.write(`herdr-xray: ${command} is not implemented in Milestone 1\n`);
+	stderr.write(`herdr-xray: ${command} is not implemented\n`);
 	return EXIT.INCOMPLETE;
+}
+
+function findDuplicateIds(marketplaceData) {
+	const byId = new Map();
+	for (const repo of marketplaceData.plugins ?? []) {
+		for (const manifest of repo.manifests ?? []) {
+			if (!manifest?.id) continue;
+			const list = byId.get(manifest.id) ?? [];
+			list.push(repo.fullName ?? `${repo.owner ?? "unknown"}/${repo.name ?? "unknown"}`);
+			byId.set(manifest.id, list);
+		}
+	}
+	return [...byId.entries()]
+		.filter(([, repos]) => new Set(repos).size > 1)
+		.map(([id, repos]) => ({ id, repos: [...new Set(repos)].sort() }))
+		.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function renderCollisions(collisions, format) {
+	if (format === "json") return `${JSON.stringify({ collisions }, null, 2)}\n`;
+	if (collisions.length === 0) return "No marketplace plugin ID collisions found.\n";
+	const lines = ["Marketplace plugin ID collisions:", ""];
+	for (const entry of collisions) {
+		if (format === "markdown") lines.push(`- \`${entry.id}\`: ${entry.repos.join(", ")}`);
+		else lines.push(`- ${entry.id}: ${entry.repos.join(", ")}`);
+	}
+	return `${lines.join("\n")}\n`;
 }

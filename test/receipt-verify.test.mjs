@@ -59,7 +59,12 @@ test("valid receipt verifies and survives CLI round-trip", async () => {
 
 test("any mutation invalidates the correct hash", async () => {
 	await withReceipt(async ({ path }) => {
-		const original = JSON.parse(await readFile(path, "utf8"));
+		let original;
+		try {
+			original = JSON.parse(await readFile(path, "utf8"));
+		} catch (error) {
+			assert.fail(`original receipt must be readable JSON: ${error}`);
+		}
 
 		// Mutating a stable field must break analysisHash (stable projection)
 		const tamperedStable = {
@@ -101,7 +106,11 @@ test("any mutation invalidates the correct hash", async () => {
 
 test("invalid JSON and contract failures are receipt-invalid", async () => {
 	await withReceipt(async ({ path }) => {
-		await writeFile(path, "{ not json");
+		try {
+			await writeFile(path, "{ not json");
+		} catch (error) {
+			assert.fail(`must be able to write invalid JSON fixture: ${error}`);
+		}
 		await assert.rejects(
 			() => verifyReceipt(path),
 			(error) => error.code === "receipt-invalid-json",

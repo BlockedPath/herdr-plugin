@@ -51,15 +51,6 @@ test("unknown commands are usage errors on stderr", async () => {
 	assert.match(result.output().stderr, /unknown command: wat/);
 });
 
-test("unimplemented planned commands fail explicitly", async () => {
-	for (const argv of [["marketplace-collisions", "--offline"]]) {
-		const result = capture();
-		assert.equal(await main(argv, result.io), EXIT.INCOMPLETE, argv.join(" "));
-		assert.equal(result.output().stdout, "");
-		assert.match(result.output().stderr, /not implemented/);
-	}
-});
-
 test("malformed commands are usage errors", async () => {
 	for (const argv of [
 		["audit"],

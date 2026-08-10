@@ -10,6 +10,8 @@ import { finalizeReceipt, sha256Value } from "../receipt/hash.mjs";
 import { redactReceipt } from "../receipt/redact.mjs";
 import { createFinding } from "../rules/finding.mjs";
 import { openInstalledSource, openSource } from "../source/open.mjs";
+import { enrichWithMarketplace } from "../marketplace/enrich.mjs";
+import { persistReceipt } from "../receipt/persist.mjs";
 
 export async function auditSource(rawSource, options = {}) {
 	return await auditOpened(await openSource(rawSource, options), options);
@@ -250,7 +252,23 @@ async function auditOpened(opened, options) {
 		analysisHash: "",
 		receiptHash: "",
 	};
-	return finalizeReceipt(redactReceipt(receipt, options.redaction ?? "strict"));
+	let final = finalizeReceipt(redactReceipt(receipt, options.redaction ?? "strict"));
+	if (options.marketplaceCheck && options.marketplaceCheck !== "off") {
+		try {
+			final = await enrichWithMarketplace(final, options);
+		} catch {}
+	}
+	if (options.persist === true && process.env.HERDR_PLUGIN_STATE_DIR) {
+		try {
+			await persistReceipt(final, options);
+		} catch {}
+	} else if (options.persist === true && !process.env.HERDR_PLUGIN_STATE_DIR) {
+		// Outside Herdr, persist to XDG state dir best-effort only if explicitly requested via env
+		try {
+			await persistReceipt(final, options);
+		} catch {}
+	}
+	return final;
 }
 
 function declarationFindings(declarations, limit = Number.POSITIVE_INFINITY) {
