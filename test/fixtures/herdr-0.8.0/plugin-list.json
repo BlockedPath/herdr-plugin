@@ -1,0 +1,35 @@
+{
+  "id": "cli:plugin",
+  "result": {
+    "plugins": [
+      {
+        "actions": [
+          {
+            "command": ["node", "src/action.mjs"],
+            "contexts": ["workspace", "pane"],
+            "id": "audit",
+            "title": "Audit"
+          }
+        ],
+        "description": "Sanitized fixture captured from Herdr 0.8.0 output shape.",
+        "enabled": true,
+        "manifest_path": "/SANITIZED/plugins/example/herdr-plugin.toml",
+        "min_herdr_version": "0.7.0",
+        "name": "Example plugin",
+        "platforms": ["linux", "macos", "windows"],
+        "plugin_id": "example.plugin",
+        "plugin_root": "/SANITIZED/plugins/example",
+        "source": {
+          "installed_unix_ms": 1700000000000,
+          "kind": "github",
+          "managed_path": "/SANITIZED/plugins/example",
+          "owner": "example-owner",
+          "repo": "example-repo",
+          "resolved_commit": "0123456789abcdef0123456789abcdef01234567"
+        },
+        "version": "1.0.0"
+      }
+    ],
+    "type": "plugin_list"
+  }
+}

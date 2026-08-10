@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "herdr-xray",
+    "version": "0.0.0",
+    "rulesVersion": 1
+  },
+  "generatedAt": "2026-08-10T00:00:00.000Z",
+  "subject": {
+    "source": {
+      "kind": "github",
+      "status": "unresolved",
+      "display": "example-owner/example-repo",
+      "owner": "example-owner",
+      "repo": "example-repo",
+      "subdir": null,
+      "requestedRef": "main",
+      "resolvedCommit": null,
+      "localRootHash": null
+    },
+    "plugin": null,
+    "installedBaseline": null
+  },
+  "limits": {
+    "timeoutMs": 60000,
+    "githubRequests": 48
+  },
+  "completeness": {
+    "complete": false,
+    "unstable": false,
+    "dimensions": {
+      "source": {
+        "status": "partial",
+        "reason": "GitHub rate limit prevented commit resolution.",
+        "limit": "githubRequests"
+      },
+      "manifest": {
+        "status": "unavailable",
+        "reason": "Source was not resolved.",
+        "limit": null
+      },
+      "executionGraph": {
+        "status": "unavailable",
+        "reason": "Manifest was unavailable.",
+        "limit": null
+      },
+      "reachableSource": {
+        "status": "unavailable",
+        "reason": "Execution graph was unavailable.",
+        "limit": null
+      },
+      "analysis": {
+        "status": "unavailable",
+        "reason": "Reachable source was unavailable.",
+        "limit": null
+      },
+      "cleanup": {
+        "status": "complete",
+        "reason": null,
+        "limit": null
+      }
+    }
+  },
+  "summary": {
+    "facts": 0,
+    "heuristics": 0,
+    "unknowns": 1,
+    "bySeverity": {
+      "info": 0,
+      "low": 0,
+      "medium": 0,
+      "high": 1
+    }
+  },
+  "graph": {
+    "nodes": [],
+    "edges": []
+  },
+  "findings": [
+    {
+      "id": "finding:github-request-limit",
+      "ruleId": "xray.dynamic.resource-limit",
+      "class": "unknown",
+      "severity": "high",
+      "confidence": "high",
+      "category": "dynamic",
+      "title": "GitHub acquisition did not complete",
+      "explanation": "The request budget was exhausted before the source commit could be resolved.",
+      "evidence": [],
+      "remediation": "Retry after the GitHub rate-limit window resets."
+    }
+  ],
+  "comparison": null,
+  "provenance": {
+    "manifestPath": "herdr-plugin.toml",
+    "files": [],
+    "analyzers": []
+  },
+  "analysisHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "receiptHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+}

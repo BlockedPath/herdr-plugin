@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+
+import { main } from "../src/cli/main.mjs";
+
+try {
+	process.exitCode = await main(process.argv.slice(2));
+} catch (error) {
+	const message = error instanceof Error ? error.message : String(error);
+	process.stderr.write(`herdr-xray: internal error: ${message}\n`);
+	process.exitCode = 3;
+}

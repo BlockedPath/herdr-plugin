@@ -1,0 +1,238 @@
+import { lstat, open, rename, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { basename, dirname, join, resolve } from "node:path";
+
+import { auditSource } from "../audit/audit.mjs";
+import { HARD_LIMITS } from "../config/limits.mjs";
+import { renderJson } from "../render/json.mjs";
+import { renderMarkdown } from "../render/markdown.mjs";
+import { renderTerminal } from "../render/terminal.mjs";
+import { EXIT, HELP, VERSION_TEXT } from "./contract.mjs";
+
+const BOOLEAN_OPTIONS = new Set([
+	"--offline",
+	"--fail-on-unknown",
+	"--require-complete",
+	"--no-color",
+]);
+const VALUE_OPTIONS = new Set([
+	"--ref",
+	"--format",
+	"--output",
+	"--marketplace-check",
+	"--redaction",
+	"--fail-on-severity",
+	"--max-files",
+	"--max-total-bytes",
+	"--max-file-bytes",
+	"--max-depth",
+	"--timeout-ms",
+]);
+
+export async function main(argv, io = {}) {
+	const stdout = io.stdout ?? process.stdout;
+	const stderr = io.stderr ?? process.stderr;
+	const [command] = argv;
+	if (argv.length === 0) {
+		stdout.write(HELP);
+		return EXIT.OK;
+	}
+	if (command === "help" || command === "--help" || command === "-h") {
+		return writeSingleton(argv, stdout, stderr, HELP);
+	}
+	if (command === "version" || command === "--version" || command === "-V") {
+		return writeSingleton(argv, stdout, stderr, VERSION_TEXT);
+	}
+	if (argv.slice(1).includes("--help")) {
+		stdout.write(HELP);
+		return EXIT.OK;
+	}
+	if (command === "receipt") {
+		if (argv.length !== 3 || argv[1] !== "verify" || argv[2].startsWith("-")) {
+			return usageError(stderr, "receipt requires: receipt verify <path>");
+		}
+		return notImplemented(stderr, "receipt verify");
+	}
+
+	const positionalCounts = {
+		audit: 1,
+		"audit-installed": 1,
+		compare: 2,
+		"marketplace-collisions": 0,
+	};
+	if (!Object.hasOwn(positionalCounts, command)) {
+		return usageError(stderr, `unknown command: ${command}`);
+	}
+	const parsed = parseCommonArguments(argv.slice(1), positionalCounts[command]);
+	if (parsed.error !== null) return usageError(stderr, parsed.error);
+	if (command !== "audit") return notImplemented(stderr, command);
+
+	try {
+		const receipt = await auditSource(parsed.positionals[0], {
+			cwd: io.cwd,
+			fetch: io.fetch,
+			ref: parsed.options.ref,
+			limits: parsed.options.limits,
+			redaction: parsed.options.redaction,
+			signal: io.signal,
+		});
+		const format = parsed.options.format ?? "terminal";
+		const rendered =
+			format === "json"
+				? renderJson(receipt)
+				: format === "markdown"
+					? renderMarkdown(receipt)
+					: renderTerminal(receipt);
+		if (parsed.options.output === undefined) stdout.write(rendered);
+		else await writeAtomic(parsed.options.output, rendered, io.cwd);
+		return policyExit(receipt, parsed.options);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		stderr.write(`herdr-xray: audit failed: ${message}\n`);
+		return EXIT.INCOMPLETE;
+	}
+}
+
+function parseCommonArguments(args, expectedPositionals) {
+	const positionals = [];
+	const rawOptions = new Map();
+	for (let index = 0; index < args.length; index += 1) {
+		const argument = args[index];
+		if (BOOLEAN_OPTIONS.has(argument)) {
+			if (rawOptions.has(argument))
+				return { error: `duplicate option: ${argument}` };
+			rawOptions.set(argument, true);
+			continue;
+		}
+		if (VALUE_OPTIONS.has(argument)) {
+			if (rawOptions.has(argument))
+				return { error: `duplicate option: ${argument}` };
+			const value = args[index + 1];
+			if (value === undefined || value.startsWith("-"))
+				return { error: `${argument} requires a value` };
+			const valueError = validateOptionValue(argument, value);
+			if (valueError !== null) return { error: valueError };
+			rawOptions.set(argument, value);
+			index += 1;
+			continue;
+		}
+		if (argument.startsWith("-"))
+			return { error: `unknown option: ${argument}` };
+		positionals.push(argument);
+	}
+	if (positionals.length !== expectedPositionals) {
+		return {
+			error: `expected ${expectedPositionals} positional argument(s), received ${positionals.length}`,
+		};
+	}
+	return { error: null, positionals, options: normalizedOptions(rawOptions) };
+}
+
+function normalizedOptions(raw) {
+	const limits = {};
+	const mappings = {
+		"--max-files": "filesAnalyzed",
+		"--max-total-bytes": "totalAnalysisBytes",
+		"--max-file-bytes": "singleTextFileBytes",
+		"--max-depth": "traceDepth",
+		"--timeout-ms": "timeoutMs",
+	};
+	for (const [option, name] of Object.entries(mappings)) {
+		if (raw.has(option)) limits[name] = Number(raw.get(option));
+	}
+	return {
+		ref: raw.get("--ref"),
+		format: raw.get("--format"),
+		output: raw.get("--output"),
+		redaction: raw.get("--redaction") ?? "strict",
+		requireComplete: raw.has("--require-complete"),
+		failOnUnknown: raw.has("--fail-on-unknown"),
+		failOnSeverity: raw.get("--fail-on-severity"),
+		limits,
+	};
+}
+
+function validateOptionValue(option, value) {
+	const choices = {
+		"--format": new Set(["terminal", "json", "markdown"]),
+		"--marketplace-check": new Set(["auto", "on", "off"]),
+		"--redaction": new Set(["strict", "standard"]),
+		"--fail-on-severity": new Set(["low", "medium", "high"]),
+	};
+	if (Object.hasOwn(choices, option) && !choices[option].has(value))
+		return `invalid value for ${option}: ${value}`;
+	const numericLimits = {
+		"--max-files": HARD_LIMITS.filesAnalyzed,
+		"--max-total-bytes": HARD_LIMITS.totalAnalysisBytes,
+		"--max-file-bytes": HARD_LIMITS.singleTextFileBytes,
+		"--max-depth": HARD_LIMITS.traceDepth,
+		"--timeout-ms": HARD_LIMITS.timeoutMs,
+	};
+	if (Object.hasOwn(numericLimits, option)) {
+		if (!/^[1-9][0-9]*$/.test(value))
+			return `${option} requires a positive integer`;
+		const parsed = Number(value);
+		if (!Number.isSafeInteger(parsed) || parsed > numericLimits[option]) {
+			return `${option} exceeds its hard maximum of ${numericLimits[option]}`;
+		}
+	}
+	if (option === "--ref" && (/\p{C}/u.test(value) || value.length > 512)) {
+		return "--ref contains control characters or exceeds 512 characters";
+	}
+	return null;
+}
+
+function policyExit(receipt, options) {
+	if (options.requireComplete && !receipt.completeness.complete)
+		return EXIT.INCOMPLETE;
+	if (options.failOnUnknown && receipt.summary.unknowns > 0) return EXIT.POLICY;
+	if (options.failOnSeverity !== undefined) {
+		const rank = { info: 0, low: 1, medium: 2, high: 3 };
+		const threshold = rank[options.failOnSeverity];
+		if (receipt.findings.some((finding) => rank[finding.severity] >= threshold))
+			return EXIT.POLICY;
+	}
+	return EXIT.OK;
+}
+
+async function writeAtomic(path, content, cwd) {
+	const destination = resolve(cwd ?? process.cwd(), path);
+	try {
+		const existing = await lstat(destination);
+		if (!existing.isFile() || existing.isSymbolicLink())
+			throw new Error("output target must be a regular file");
+	} catch (error) {
+		if (error?.code !== "ENOENT") throw error;
+	}
+	const temporary = join(
+		dirname(destination),
+		`.${basename(destination)}.xray-${process.pid}-${randomUUID()}.tmp`,
+	);
+	let handle;
+	try {
+		handle = await open(temporary, "wx", 0o600);
+		await handle.writeFile(content, "utf8");
+		await handle.sync();
+		await handle.close();
+		handle = null;
+		await rename(temporary, destination);
+	} finally {
+		await handle?.close();
+		await rm(temporary, { force: true });
+	}
+}
+
+function writeSingleton(argv, stdout, stderr, text) {
+	if (argv.length !== 1)
+		return usageError(stderr, `${argv[0]} does not accept arguments`);
+	stdout.write(text);
+	return EXIT.OK;
+}
+function usageError(stderr, message) {
+	stderr.write(`herdr-xray: ${message}\nRun 'herdr-xray help' for usage.\n`);
+	return EXIT.USAGE;
+}
+function notImplemented(stderr, command) {
+	stderr.write(`herdr-xray: ${command} is not implemented in Milestone 1\n`);
+	return EXIT.INCOMPLETE;
+}

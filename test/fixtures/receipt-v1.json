@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "herdr-xray",
+    "version": "0.0.0",
+    "rulesVersion": 1
+  },
+  "generatedAt": "2026-08-10T00:00:00.000Z",
+  "subject": {
+    "source": {
+      "kind": "github",
+      "status": "resolved",
+      "display": "example-owner/example-repo",
+      "owner": "example-owner",
+      "repo": "example-repo",
+      "subdir": null,
+      "requestedRef": "main",
+      "resolvedCommit": "0123456789abcdef0123456789abcdef01234567",
+      "localRootHash": null
+    },
+    "plugin": {
+      "id": "example.plugin",
+      "name": "Example plugin",
+      "version": "1.0.0",
+      "minHerdrVersion": "0.8.0",
+      "platforms": ["linux", "macos", "windows"]
+    },
+    "installedBaseline": null
+  },
+  "limits": {
+    "timeoutMs": 60000,
+    "filesAnalyzed": 2000
+  },
+  "completeness": {
+    "complete": true,
+    "unstable": false,
+    "dimensions": {
+      "source": { "status": "complete", "reason": null, "limit": null },
+      "manifest": { "status": "complete", "reason": null, "limit": null },
+      "executionGraph": { "status": "complete", "reason": null, "limit": null },
+      "reachableSource": { "status": "complete", "reason": null, "limit": null },
+      "analysis": { "status": "complete", "reason": null, "limit": null },
+      "cleanup": { "status": "complete", "reason": null, "limit": null }
+    }
+  },
+  "summary": {
+    "facts": 0,
+    "heuristics": 0,
+    "unknowns": 0,
+    "bySeverity": {
+      "info": 0,
+      "low": 0,
+      "medium": 0,
+      "high": 0
+    }
+  },
+  "graph": {
+    "nodes": [],
+    "edges": []
+  },
+  "findings": [],
+  "comparison": null,
+  "provenance": {
+    "manifestPath": "herdr-plugin.toml",
+    "files": [
+      {
+        "path": "herdr-plugin.toml",
+        "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "bytes": 128,
+        "role": "manifest"
+      }
+    ],
+    "analyzers": [
+      {
+        "id": "manifest",
+        "version": 1
+      }
+    ]
+  },
+  "analysisHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "receiptHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+}

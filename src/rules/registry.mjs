@@ -1,0 +1,35 @@
+export const RULES = Object.freeze([
+	rule("xray.execution.install-build", "fact", "high", "execution"),
+	rule("xray.execution.server-startup", "fact", "high", "execution"),
+	rule("xray.execution.event-hook", "fact", "medium", "execution"),
+	rule("xray.execution.link-handler", "fact", "low", "execution"),
+	rule("xray.execution.shell-inline-eval", "fact", "high", "execution"),
+	rule("xray.execution.download-to-shell", "heuristic", "high", "execution"),
+	rule("xray.execution.dynamic-subprocess", "unknown", "high", "execution"),
+	rule("xray.execution.dynamic-import", "unknown", "medium", "execution"),
+	rule("xray.execution.dynamic-code", "unknown", "high", "execution"),
+	rule("xray.package.lifecycle-script", "fact", "high", "package"),
+	rule("xray.network.endpoint", "fact", "medium", "network"),
+	rule("xray.network.dynamic-endpoint", "unknown", "medium", "network"),
+	rule("xray.credential.environment-read", "heuristic", "high", "credential"),
+	rule("xray.filesystem.external-write", "heuristic", "high", "filesystem"),
+	rule("xray.filesystem.dynamic-write", "unknown", "medium", "filesystem"),
+	rule("xray.opaque.native-binary", "unknown", "high", "opaque"),
+	rule("xray.opaque.wasm", "unknown", "medium", "opaque"),
+	rule("xray.dynamic.missing-reference", "unknown", "medium", "dynamic"),
+	rule("xray.dynamic.external-symlink", "unknown", "high", "dynamic"),
+	rule("xray.dynamic.unsupported-language", "unknown", "medium", "dynamic"),
+	rule("xray.dynamic.submodule", "unknown", "high", "dynamic"),
+	rule("xray.dynamic.git-lfs", "unknown", "high", "dynamic"),
+	rule("xray.dynamic.resource-limit", "unknown", "high", "dynamic"),
+	rule("xray.dynamic.unknown-manifest-field", "unknown", "medium", "dynamic"),
+	rule("xray.identity.platforms-missing", "heuristic", "low", "identity"),
+	rule("xray.identity.plugin-id-collision", "heuristic", "high", "identity"),
+	rule("xray.identity.source-changed", "fact", "high", "identity"),
+	rule("xray.identity.platform-changed", "fact", "medium", "identity"),
+	rule("xray.identity.herdr-version-changed", "fact", "low", "identity"),
+]);
+
+function rule(id, classification, severity, category) {
+	return Object.freeze({ id, classification, severity, category });
+}

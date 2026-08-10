@@ -1,0 +1,18 @@
+{
+  "name": "herdr-xray",
+  "version": "0.0.0",
+  "description": "Pre-install execution graphs and trust receipts for Herdr plugins.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "herdr-xray": "./bin/herdr-xray.mjs"
+  },
+  "scripts": {
+    "check": "node --check bin/herdr-xray.mjs && node --test",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
