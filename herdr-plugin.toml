@@ -1,19 +1,19 @@
 id = "blockedpath.xray"
-name = "Env Peek"
-version = "0.2.0"
+name = "Herdr Mixtape"
+version = "0.3.0"
 min_herdr_version = "0.8.0"
-description = "Diff .env vs .env.example, highlight credential keys without revealing values."
+description = "Turn your git log into a shareable mixtape cover and tracklist."
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
 id = "open"
-title = "Env Peek: show env diff"
+title = "Herdr Mixtape: show git log as mixtape"
 contexts = ["workspace", "pane"]
 command = ["node", "src/ui/open.mjs"]
 
 [[panes]]
 id = "xray"
-title = "Env Peek"
+title = "Herdr Mixtape"
 placement = "popup"
 width = "90%"
 height = "85%"

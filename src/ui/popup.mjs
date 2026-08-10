@@ -1,134 +1,92 @@
 #!/usr/bin/env node
-import { readdir, readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { join } from "node:path";
-
-const CREDENTIAL =
-	/(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY|PRIVATE_KEY|CREDENTIAL|AUTH)/i;
 
 function workspaceRoot() {
-	return (
-		process.env.HERDR_WORKSPACE_ROOT ??
-		process.env.HERDR_PANE_CWD ??
-		process.cwd()
-	);
+	return process.env.HERDR_WORKSPACE_ROOT ?? process.env.HERDR_PANE_CWD ?? process.cwd();
 }
 
-async function findEnvFiles(root) {
-	try {
-		const entries = await readdir(root, { withFileTypes: true });
-		return entries
-			.filter((e) => e.isFile() && e.name.startsWith(".env"))
-			.map((e) => e.name)
-			.sort();
-	} catch {
-		return [];
-	}
+function gitLog(root) {
+	return new Promise((resolve, reject) => {
+		const child = spawn("git", ["log", "--oneline", "-20", "--color=never"], { cwd: root, shell: false });
+		let out = "";
+		let err = "";
+		child.stdout.on("data", (d) => (out += d));
+		child.stderr.on("data", (d) => (err += d));
+		child.on("error", reject);
+		child.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(err || `git log exited ${code}`))));
+	});
 }
 
-function parseEnv(text) {
-	const map = new Map();
-	for (const raw of text.split("\n")) {
-		const line = raw.trim();
-		if (!line || line.startsWith("#")) continue;
-		const eq = line.indexOf("=");
-		if (eq === -1) continue;
-		const key = line.slice(0, eq).trim();
-		const value = line.slice(eq + 1).trim();
-		if (!key) continue;
-		map.set(key, value);
-	}
-	return map;
-}
-
-function mask(value) {
-	if (!value) return "<empty>";
-	return "••••••";
+function gitShow(root, hash) {
+	return new Promise((resolve, reject) => {
+		const child = spawn("git", ["show", "--stat", hash], { cwd: root, shell: false });
+		let out = "";
+		child.stdout.on("data", (d) => (out += d));
+		child.stderr.on("data", (d) => (out += d));
+		child.on("error", reject);
+		child.on("close", () => resolve(out));
+	});
 }
 
 const root = workspaceRoot();
-const files = await findEnvFiles(root);
-
-if (files.length === 0) {
-	process.stdout.write(`Env Peek — ${root}\nNo .env* files found.\n`);
+let log = "";
+try {
+	log = await gitLog(root);
+} catch (e) {
+	process.stdout.write(`Herdr Mixtape — ${root}\n\nNot a git repo or no commits: ${e instanceof Error ? e.message : String(e)}\n\n[q] quit\n`);
 	process.exit(0);
 }
 
-const envs = new Map();
-for (const name of files) {
-	try {
-		const text = await readFile(join(root, name), "utf8");
-		envs.set(name, parseEnv(text));
-	} catch {
-		envs.set(name, new Map());
-	}
-}
+const tracks = log.trim().split("\n").filter(Boolean).map((line) => {
+	const sp = line.indexOf(" ");
+	return { hash: line.slice(0, sp), message: line.slice(sp + 1) };
+});
 
-const example = envs.get(".env.example") ?? envs.get(".env.sample") ?? null;
-const primary = envs.get(".env") ?? envs.get(files[0]);
+const title = root.split("/").pop() || "herdr";
+const date = new Date().toISOString().slice(0, 10);
 
-process.stdout.write(`Env Peek — ${root}\nFound: ${files.join(", ")}\n`);
-if (example && primary) {
-	const missing = [...example.keys()].filter((k) => !primary.has(k));
-	const extra = [...primary.keys()].filter((k) => !example.has(k));
-	const empty = [...primary.entries()]
-		.filter(([, v]) => v === "")
-		.map(([k]) => k);
-	const credentialMissing = missing.filter((k) => CREDENTIAL.test(k));
+// ASCII mixtape cover
+const cover = [
+	"┌──────────────────────────────────────┐",
+	`│  HERDR MIXTAPE: ${title.padEnd(22).slice(0, 22)} │`,
+	`│  ${date}                     │`,
+	`│                                      │`,
+	`│   ██████  ██   ██  ██████             │`,
+	`│   ██      ██   ██  ██                 │`,
+	`│   ██      ███████  █████              │`,
+	`│   ██      ██   ██  ██                 │`,
+	`│   ██████  ██   ██  ██ Vol.1          │`,
+	"└──────────────────────────────────────┘",
+];
 
-	if (missing.length) {
-		process.stdout.write(
-			`\nMissing in ${primary === envs.get(".env") ? ".env" : files[0]} vs .env.example (${missing.length}):\n`,
-		);
-		for (const k of missing) {
-			const flag = CREDENTIAL.test(k) ? " [credential]" : "";
-			process.stdout.write(`  - ${k}${flag}\n`);
-		}
-	} else {
-		process.stdout.write("\nNo missing keys vs .env.example\n");
-	}
-	if (credentialMissing.length) {
-		process.stdout.write(
-			`\n⚠ Credential keys missing: ${credentialMissing.join(", ")}\n`,
-		);
-	}
-	if (empty.length) {
-		process.stdout.write(
-			`\nEmpty values in primary (${empty.length}): ${empty.join(", ")}\n`,
-		);
-	}
-	if (extra.length) {
-		process.stdout.write(
-			`\nExtra in primary not in example (${extra.length}): ${extra.join(", ")}\n`,
-		);
-	}
-} else {
-	process.stdout.write("\nTip: add .env.example to get missing/extra diff\n");
-}
-
-process.stdout.write("\nKeys (values masked):\n");
-for (const [name, map] of envs) {
-	process.stdout.write(`\n${name} (${map.size} keys):\n`);
-	for (const [k, v] of map) {
-		const tag = CREDENTIAL.test(k) ? " credential" : "";
-		process.stdout.write(`  ${k}=${mask(v)}${tag}\n`);
-	}
-}
-
-process.stdout.write("\n[q] quit  [r] reload\n");
+process.stdout.write(cover.join("\n") + "\n\n");
+process.stdout.write(`Side A — ${tracks.slice(0, 10).length} tracks  |  Side B — ${tracks.slice(10).length} tracks\n\n`);
+tracks.forEach((t, i) => {
+	const side = i < 10 ? "A" : "B";
+	const num = i < 10 ? i + 1 : i - 9;
+	process.stdout.write(`${side}${num}. ${t.message.slice(0, 60)}  [${t.hash.slice(0, 7)}]\n`);
+});
+process.stdout.write("\n[Enter number] play (git show)  [c] copy tracklist  [s] save png (Kitty)  [q] quit\n");
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
-rl.on("line", (line) => {
-	if (line.trim().toLowerCase() === "q") {
-		rl.close();
-		process.exit(0);
+rl.on("line", async (line) => {
+	const v = line.trim().toLowerCase();
+	if (v === "q") { rl.close(); process.exit(0); }
+	if (v === "c") {
+		const list = tracks.map((t, i) => `${i + 1}. ${t.message} (${t.hash})`).join("\n");
+		process.stdout.write("\n" + list + "\n\n");
+		return;
 	}
-	if (line.trim().toLowerCase() === "r") {
-		rl.close();
-		process.exit(0);
+	if (v === "s") {
+		process.stdout.write("\n[Kitty graphics PNG sharing not yet implemented — use [c] then screenshot]\n\n");
+		return;
+	}
+	const n = Number.parseInt(v, 10);
+	if (!Number.isNaN(n) && n >= 1 && n <= tracks.length) {
+		const track = tracks[n - 1];
+		const show = await gitShow(root, track.hash);
+		process.stdout.write("\n" + show.slice(0, 4000) + "\n\n");
 	}
 });
-process.on("SIGINT", () => {
-	rl.close();
-	process.exit(0);
-});
+process.on("SIGINT", () => { rl.close(); process.exit(0); });
