@@ -1,0 +1,5 @@
+# Byte-identical checkouts on every platform. Herdr X-Ray hashes vendored and
+# fixture files, so platform line-ending translation must never rewrite them.
+* text=auto eol=lf
+vendor/** -text
+test/fixtures/** -text

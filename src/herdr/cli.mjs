@@ -137,7 +137,6 @@ async function runHerdr(argv, options) {
 				),
 			);
 		}, limits.timeoutMs);
-		if (typeof timer.unref === "function") timer.unref();
 
 		function finish(error, value) {
 			if (settled) return;

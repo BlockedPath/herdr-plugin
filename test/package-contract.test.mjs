@@ -27,3 +27,12 @@ test("repository ignores local subagent transcripts", async () => {
 	const gitignore = await readFile(join(root, ".gitignore"), "utf8");
 	assert.match(gitignore, /^\.pi-subagents\/$/m);
 });
+
+test("hashed files check out byte-identically on every platform", async () => {
+	const attributes = await readFile(join(root, ".gitattributes"), "utf8");
+	assert.match(attributes, /^\* text=auto eol=lf$/m);
+	assert.match(attributes, /^vendor\/\*\* -text$/m);
+	assert.match(attributes, /^test\/fixtures\/\*\* -text$/m);
+	const parser = await readFile(join(root, "vendor", "toml", "date.js"));
+	assert.equal(parser.includes(Buffer.from("\r\n")), false);
+});
