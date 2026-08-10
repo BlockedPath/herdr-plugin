@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { auditInstalled, auditSource } from "../audit/audit.mjs";
 import { compareInstalled } from "../compare/compare.mjs";
 import { HARD_LIMITS } from "../config/limits.mjs";
+import { ReceiptVerifyError, verifyReceipt } from "../receipt/verify.mjs";
 import { renderJson } from "../render/json.mjs";
 import { renderMarkdown } from "../render/markdown.mjs";
 import { renderTerminal } from "../render/terminal.mjs";
@@ -52,7 +53,19 @@ export async function main(argv, io = {}) {
 		if (argv.length !== 3 || argv[1] !== "verify" || argv[2].startsWith("-")) {
 			return usageError(stderr, "receipt requires: receipt verify <path>");
 		}
-		return notImplemented(stderr, "receipt verify");
+		try {
+			await verifyReceipt(argv[2], { cwd: io.cwd, limits: io.limits });
+			stdout.write(`receipt verify: ${argv[2]} is valid\n`);
+			return EXIT.OK;
+		} catch (error) {
+			if (error instanceof ReceiptVerifyError) {
+				stderr.write(`herdr-xray: receipt verify failed: ${error.message}\n`);
+				return EXIT.RECEIPT_INVALID;
+			}
+			const message = error instanceof Error ? error.message : String(error);
+			stderr.write(`herdr-xray: receipt verify failed: ${message}\n`);
+			return EXIT.INCOMPLETE;
+		}
 	}
 
 	const positionalCounts = {

@@ -288,7 +288,9 @@ function platformsEqual(left, right) {
 	const leftNormalized = normalizePlatforms(left);
 	const rightNormalized = normalizePlatforms(right);
 	if (leftNormalized.length !== rightNormalized.length) return false;
-	return leftNormalized.every((value, index) => value === rightNormalized[index]);
+	return leftNormalized.every(
+		(value, index) => value === rightNormalized[index],
+	);
 }
 
 function compareChanges(left, right) {

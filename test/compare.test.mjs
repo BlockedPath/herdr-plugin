@@ -322,11 +322,30 @@ command = ["node", "run.mjs"]
 test("reordered platforms do not invent a change", () => {
 	const base = {
 		subject: {
-			plugin: { id: "x", name: "x", version: "1", minHerdrVersion: "0.8.0", platforms: [] },
-			source: { kind: "local", owner: null, repo: null, subdir: null, resolvedCommit: null },
+			plugin: {
+				id: "x",
+				name: "x",
+				version: "1",
+				minHerdrVersion: "0.8.0",
+				platforms: [],
+			},
+			source: {
+				kind: "local",
+				owner: null,
+				repo: null,
+				subdir: null,
+				resolvedCommit: null,
+			},
 		},
 		graph: {
-			nodes: [{ id: "n1", type: "trigger", label: "build", effectivePlatforms: ["linux", "windows"] }],
+			nodes: [
+				{
+					id: "n1",
+					type: "trigger",
+					label: "build",
+					effectivePlatforms: ["linux", "windows"],
+				},
+			],
 			edges: [],
 		},
 		findings: [],
@@ -336,13 +355,22 @@ test("reordered platforms do not invent a change", () => {
 	const candidate = {
 		...base,
 		graph: {
-			nodes: [{ id: "n1", type: "trigger", label: "build", effectivePlatforms: ["windows", "linux"] }],
+			nodes: [
+				{
+					id: "n1",
+					type: "trigger",
+					label: "build",
+					effectivePlatforms: ["windows", "linux"],
+				},
+			],
 			edges: [],
 		},
 	};
 	const { changes } = diffReceipts(base, candidate, { comparisonChanges: 500 });
 	assert.equal(
-		changes.some((entry) => entry.kind === "graph" && entry.change === "changed"),
+		changes.some(
+			(entry) => entry.kind === "graph" && entry.change === "changed",
+		),
 		false,
 		JSON.stringify(changes),
 	);
@@ -351,8 +379,20 @@ test("reordered platforms do not invent a change", () => {
 test("undefined effectivePlatforms does not crash diff", () => {
 	const base = {
 		subject: {
-			plugin: { id: "x", name: "x", version: "1", minHerdrVersion: "0.8.0", platforms: [] },
-			source: { kind: "local", owner: null, repo: null, subdir: null, resolvedCommit: null },
+			plugin: {
+				id: "x",
+				name: "x",
+				version: "1",
+				minHerdrVersion: "0.8.0",
+				platforms: [],
+			},
+			source: {
+				kind: "local",
+				owner: null,
+				repo: null,
+				subdir: null,
+				resolvedCommit: null,
+			},
 		},
 		graph: {
 			nodes: [{ id: "n1", type: "trigger", label: "build" }],
@@ -365,11 +405,28 @@ test("undefined effectivePlatforms does not crash diff", () => {
 	const candidate = {
 		...base,
 		graph: {
-			nodes: [{ id: "n1", type: "trigger", label: "build", effectivePlatforms: ["linux"] }],
-			edges: [{ id: "e1", type: "invokes", from: "n1", to: "n1", effectivePlatforms: ["linux"] }],
+			nodes: [
+				{
+					id: "n1",
+					type: "trigger",
+					label: "build",
+					effectivePlatforms: ["linux"],
+				},
+			],
+			edges: [
+				{
+					id: "e1",
+					type: "invokes",
+					from: "n1",
+					to: "n1",
+					effectivePlatforms: ["linux"],
+				},
+			],
 		},
 	};
-	assert.doesNotThrow(() => diffReceipts(base, candidate, { comparisonChanges: 500 }));
+	assert.doesNotThrow(() =>
+		diffReceipts(base, candidate, { comparisonChanges: 500 }),
+	);
 	const { changes } = diffReceipts(base, candidate, { comparisonChanges: 500 });
 	assert.equal(
 		changes.some((entry) => entry.subject.includes("<none> -> linux")),
