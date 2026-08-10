@@ -257,35 +257,24 @@ function crc32(buf) {
 
 function playClick() {
 	process.stdout.write("\x07");
-	try {
-		const p = spawn("afplay", ["/System/Library/Sounds/Glass.aiff", "-v", "10"], {
-			stdio: "ignore",
-			detached: true,
-		});
-		p.unref();
-		return;
-	} catch {}
-	try {
-		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff", "-v", "10"], {
-			stdio: "ignore",
-			detached: true,
-		});
-		p.unref();
-		return;
-	} catch {}
-	try {
-		const p = spawn("osascript", ["-e", "beep"], { stdio: "ignore", detached: true });
-		p.unref();
-		return;
-	} catch {}
-	try {
-		const p = spawn(
-			"paplay",
-			["/usr/share/sounds/freedesktop/stereo/message.oga"],
-			{ stdio: "ignore", detached: true },
-		);
-		p.unref();
-	} catch {}
+	const tryNext = (cmd, args, next) => {
+		let spawned;
+		try {
+			spawned = spawn(cmd, args, { stdio: "ignore", detached: true });
+		} catch {
+			next?.();
+			return;
+		}
+		spawned.on("error", () => next?.());
+		spawned.unref();
+	};
+	tryNext("afplay", ["/System/Library/Sounds/Glass.aiff", "-v", "10"], () =>
+		tryNext("afplay", ["/System/Library/Sounds/Pop.aiff", "-v", "10"], () =>
+			tryNext("osascript", ["-e", "beep"], () =>
+				tryNext("paplay", ["/usr/share/sounds/freedesktop/stereo/message.oga"]),
+			),
+		),
+	);
 }
 
 const FONT = {
