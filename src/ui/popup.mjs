@@ -256,11 +256,25 @@ function crc32(buf) {
 }
 
 function playClick() {
+	process.stdout.write("\x07");
 	try {
-		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff"], {
+		const p = spawn("afplay", ["/System/Library/Sounds/Glass.aiff", "-v", "10"], {
 			stdio: "ignore",
 			detached: true,
 		});
+		p.unref();
+		return;
+	} catch {}
+	try {
+		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff", "-v", "10"], {
+			stdio: "ignore",
+			detached: true,
+		});
+		p.unref();
+		return;
+	} catch {}
+	try {
+		const p = spawn("osascript", ["-e", "beep"], { stdio: "ignore", detached: true });
 		p.unref();
 		return;
 	} catch {}
