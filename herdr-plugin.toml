@@ -1,32 +1,20 @@
 id = "blockedpath.xray"
-name = "Herdr X-Ray"
-version = "0.1.0"
+name = "Env Peek"
+version = "0.2.0"
 min_herdr_version = "0.8.0"
-description = "Pre-install execution graphs and trust receipts for Herdr plugins."
+description = "Diff .env vs .env.example, highlight credential keys without revealing values."
 platforms = ["linux", "macos", "windows"]
 
 [[actions]]
 id = "open"
-title = "X-Ray: audit a plugin"
+title = "Env Peek: show env diff"
 contexts = ["workspace", "pane"]
 command = ["node", "src/ui/open.mjs"]
 
-[[actions]]
-id = "audit-installed"
-title = "X-Ray: audit installed plugin"
-contexts = ["workspace", "pane"]
-command = ["node", "src/ui/open.mjs", "--installed"]
-
 [[panes]]
 id = "xray"
-title = "Herdr X-Ray"
+title = "Env Peek"
 placement = "popup"
 width = "90%"
 height = "85%"
 command = ["node", "src/ui/popup.mjs"]
-
-[[link_handlers]]
-id = "github-plugin"
-title = "Audit GitHub plugin with X-Ray"
-pattern = "^https://github\\.com/[^/?#]+/[^/?#]+/?$"
-action = "open"

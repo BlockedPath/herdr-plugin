@@ -1,104 +1,107 @@
 #!/usr/bin/env node
+import { readdir, readFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
-import { auditSource, auditInstalled } from "../audit/audit.mjs";
-import { compareInstalled } from "../compare/compare.mjs";
-import { renderTerminal } from "../render/terminal.mjs";
-import { getMarketplace } from "../marketplace/index.mjs";
+import { join } from "node:path";
+
+const CREDENTIAL = /(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY|PRIVATE_KEY|CREDENTIAL|AUTH)/i;
+
+function workspaceRoot() {
+	return process.env.HERDR_WORKSPACE_ROOT ?? process.env.HERDR_PANE_CWD ?? process.cwd();
+}
+
+async function findEnvFiles(root) {
+	try {
+		const entries = await readdir(root, { withFileTypes: true });
+		return entries.filter((e) => e.isFile() && e.name.startsWith(".env")).map((e) => e.name).sort();
+	} catch {
+		return [];
+	}
+}
+
+function parseEnv(text) {
+	const map = new Map();
+	for (const raw of text.split("\n")) {
+		const line = raw.trim();
+		if (!line || line.startsWith("#")) continue;
+		const eq = line.indexOf("=");
+		if (eq === -1) continue;
+		const key = line.slice(0, eq).trim();
+		const value = line.slice(eq + 1).trim();
+		if (!key) continue;
+		map.set(key, value);
+	}
+	return map;
+}
+
+function mask(value) {
+	if (!value) return "<empty>";
+	return "••••••";
+}
+
+const root = workspaceRoot();
+const files = await findEnvFiles(root);
+
+if (files.length === 0) {
+	process.stdout.write(`Env Peek — ${root}\nNo .env* files found.\n`);
+	process.exit(0);
+}
+
+const envs = new Map();
+for (const name of files) {
+	try {
+		const text = await readFile(join(root, name), "utf8");
+		envs.set(name, parseEnv(text));
+	} catch {
+		envs.set(name, new Map());
+	}
+}
+
+const example = envs.get(".env.example") ?? envs.get(".env.sample") ?? null;
+const primary = envs.get(".env") ?? envs.get(files[0]);
+
+process.stdout.write(`Env Peek — ${root}\nFound: ${files.join(", ")}\n`);
+if (example && primary) {
+	const missing = [...example.keys()].filter((k) => !primary.has(k));
+	const extra = [...primary.keys()].filter((k) => !example.has(k));
+	const empty = [...primary.entries()].filter(([, v]) => v === "").map(([k]) => k);
+	const credentialMissing = missing.filter((k) => CREDENTIAL.test(k));
+
+	if (missing.length) {
+		process.stdout.write(`\nMissing in ${primary === envs.get(".env") ? ".env" : files[0]} vs .env.example (${missing.length}):\n`);
+		for (const k of missing) {
+			const flag = CREDENTIAL.test(k) ? " [credential]" : "";
+			process.stdout.write(`  - ${k}${flag}\n`);
+		}
+	} else {
+		process.stdout.write("\nNo missing keys vs .env.example\n");
+	}
+	if (credentialMissing.length) {
+		process.stdout.write(`\n⚠ Credential keys missing: ${credentialMissing.join(", ")}\n`);
+	}
+	if (empty.length) {
+		process.stdout.write(`\nEmpty values in primary (${empty.length}): ${empty.join(", ")}\n`);
+	}
+	if (extra.length) {
+		process.stdout.write(`\nExtra in primary not in example (${extra.length}): ${extra.join(", ")}\n`);
+	}
+} else {
+	process.stdout.write("\nTip: add .env.example to get missing/extra diff\n");
+}
+
+process.stdout.write("\nKeys (values masked):\n");
+for (const [name, map] of envs) {
+	process.stdout.write(`\n${name} (${map.size} keys):\n`);
+	for (const [k, v] of map) {
+		const tag = CREDENTIAL.test(k) ? " credential" : "";
+		process.stdout.write(`  ${k}=${mask(v)}${tag}\n`);
+	}
+}
+
+process.stdout.write("\n[q] quit  [r] reload\n");
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-function question(prompt) {
-	return new Promise((resolve) => rl.question(prompt, resolve));
-}
-
-function clearTemp() {
-	// Popup holds no durable temp files; any per-run temp is in OS tmp and cleaned by audit
-}
-
-process.on("SIGINT", () => {
-	clearTemp();
-	rl.close();
-	process.exit(0);
+rl.on("line", (line) => {
+	if (line.trim().toLowerCase() === "q") { rl.close(); process.exit(0); }
+	if (line.trim().toLowerCase() === "r") { rl.close(); process.exit(0); }
 });
-
-const modeEnv = process.env.HERDR_XRAY_MODE;
-const sourceEnv = process.env.HERDR_XRAY_SOURCE;
-
-let mode = modeEnv === "installed" ? "installed" : "choose";
-let source = sourceEnv ?? null;
-
-if (mode === "choose") {
-	const choice = await question(
-		"X-Ray: [1] Audit GitHub/local  [2] Audit installed  [3] Compare  [q] Quit > ",
-	);
-	if (choice.trim() === "1") {
-		source = await question(
-			"Enter source (owner/repo, https://github.com/owner/repo, or ./local/path) > ",
-		);
-		mode = "audit";
-	} else if (choice.trim() === "2") {
-		const pluginId = await question("Installed plugin ID > ");
-		try {
-			const receipt = await auditInstalled(pluginId.trim());
-			process.stdout.write(renderTerminal(receipt));
-			process.stdout.write(
-				`\nCommit-pinned install: herdr plugin install ${receipt.subject.source.owner ?? "owner"}/${receipt.subject.source.repo ?? "repo"} --ref ${receipt.subject.source.resolvedCommit ?? "<commit>"}\n`,
-			);
-		} catch (error) {
-			process.stderr.write(
-				`audit failed: ${error instanceof Error ? error.message : String(error)}\n`,
-			);
-		}
-		clearTemp();
-		rl.close();
-		process.exit(0);
-	} else if (choice.trim() === "3") {
-		const pluginId = await question("Installed plugin ID > ");
-		const candidate = await question("Candidate source > ");
-		try {
-			const receipt = await compareInstalled(pluginId.trim(), candidate.trim());
-			process.stdout.write(renderTerminal(receipt));
-		} catch (error) {
-			process.stderr.write(
-				`compare failed: ${error instanceof Error ? error.message : String(error)}\n`,
-			);
-		}
-		clearTemp();
-		rl.close();
-		process.exit(0);
-	} else {
-		clearTemp();
-		rl.close();
-		process.exit(0);
-	}
-}
-
-if (source) {
-	// Validate source is repository-root-like or local path; treat as data, never as shell
-	const trimmed = source.trim();
-	try {
-		const receipt = await auditSource(trimmed);
-		process.stdout.write(renderTerminal(receipt));
-		process.stdout.write(
-			`\nCommit-pinned install: herdr plugin install ${receipt.subject.source.owner ?? "owner"}/${receipt.subject.source.repo ?? "repo"} --ref ${receipt.subject.source.resolvedCommit ?? "<commit>"}\n`,
-		);
-		// Best-effort marketplace collision note (offline-safe)
-		try {
-			const data = await getMarketplace({ offline: false });
-			const { findCollisions } = await import("../marketplace/collisions.mjs");
-			const collisions = findCollisions(receipt.subject.plugin.id, data);
-			if (collisions.length > 1) {
-				process.stdout.write(
-					`\nMarketplace collision: ${receipt.subject.plugin.id} claimed by ${collisions.map((c) => c.fullName).join(", ")}\n`,
-				);
-			}
-		} catch {}
-	} catch (error) {
-		process.stderr.write(
-			`audit failed: ${error instanceof Error ? error.message : String(error)}\n`,
-		);
-	}
-}
-
-clearTemp();
-rl.close();
+process.on("SIGINT", () => { rl.close(); process.exit(0); });

@@ -8,7 +8,7 @@ X-Ray reports evidence and unknowns. It does **not** label plugins safe or malic
 
 ## Status
 
-**v0.1.0** — Milestones 0–4 complete. The CLI and Herdr popup provide bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis; installed-plugin auditing via `herdr plugin list --json`; candidate-versus-installed comparison; marketplace collision enrichment; receipt verification and hashed persistence; and a popup UI.
+**v0.2.0** — Herdr X-Ray CLI (`v0.1.0`) + **Env Peek** popup. CLI: bounded audits, compare, marketplace, receipts. Popup: `Env Peek` — diffs `.env` vs `.env.example`, masks values, highlights `*TOKEN*`/`*SECRET*` without revealing them.
 
 All commands are implemented; no placeholder exit code 3 remains.
 

@@ -1,6 +1,6 @@
 {
   "name": "herdr-xray",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pre-install execution graphs and trust receipts for Herdr plugins.",
   "type": "module",
   "bin": {
