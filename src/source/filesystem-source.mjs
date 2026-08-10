@@ -30,7 +30,7 @@ export class FilesystemSource {
 	}
 
 	constructor(root, rootStat, options = {}) {
-		this.kind = "local";
+		this.kind = options.kind === "installed" ? "installed" : "local";
 		this.root = root;
 		this.limits = resolveLimits(options.limits);
 		this.initialRootSignature = signature(rootStat);

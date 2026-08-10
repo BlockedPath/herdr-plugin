@@ -8,9 +8,9 @@ X-Ray reports evidence and unknowns. It does **not** label plugins safe or malic
 
 ## Status
 
-Milestones 0–2 are complete. The CLI now includes bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis.
+Milestones 0–2 are complete, and Milestone 3 has begun with `audit-installed`. The CLI now includes bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis, plus installed-plugin auditing through Herdr's public `plugin list --json` contract.
 
-Installed comparison, marketplace collision enrichment, receipt verification, and the Herdr popup remain planned. Unimplemented commands fail explicitly with exit code 3 rather than pretending to operate.
+Candidate-versus-installed comparison, marketplace collision enrichment, receipt verification, and the Herdr popup remain planned. Unimplemented commands fail explicitly with exit code 3 rather than pretending to operate.
 
 ## Design constraints
 
@@ -34,12 +34,12 @@ node bin/herdr-xray.mjs help
 node bin/herdr-xray.mjs version
 node bin/herdr-xray.mjs audit owner/repo[/subdir] --ref <ref>
 node bin/herdr-xray.mjs audit ./local/plugin --format json
+node bin/herdr-xray.mjs audit-installed <plugin-id>
 ```
 
 Planned additional stable interface:
 
 ```bash
-herdr-xray audit-installed <plugin-id>
 herdr-xray compare <plugin-id> owner/repo --ref <ref>
 herdr-xray marketplace-collisions
 herdr-xray receipt verify receipt.json
@@ -81,7 +81,7 @@ The product direction follows a metadata-complete review of the current Herdr ma
 1. **Milestone 0 — contracts and threat model:** complete
 2. **Milestone 1 — fact-only CLI vertical slice:** complete
 3. **Milestone 2 — bounded analyzers and findings:** complete
-4. **Milestone 3 — installed comparison and trust receipts**
+4. **Milestone 3 — installed comparison and trust receipts:** in progress
 5. **Milestone 4 — Herdr popup integration**
 6. **Milestone 5 — hardening and stable release**
 

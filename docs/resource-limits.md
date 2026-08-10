@@ -42,6 +42,7 @@ These values are the Milestone 0 contract. Representative-plugin measurement may
 | Captured stderr/diagnostic body | 64 KiB | 256 KiB |
 | Persisted evidence excerpt | 160 UTF-16 code units | 512 |
 | Marketplace response | 16 MiB | 32 MiB |
+| Herdr CLI response | 8 MiB | 32 MiB |
 | HTTP redirects | 0 | 0 |
 
 ## Accounting rules
@@ -53,6 +54,10 @@ Count compressed bytes as delivered when exposed by the runtime and always count
 Commit, tree, blob, and GitHub error bodies consume the GitHub source total-response budget in addition to their operation-specific cap. Each request consumes the request budget even when it fails. The operation-specific cap is authoritative for that response; there is no conflicting generic single-response cap.
 
 Marketplace enrichment has a separate response cap and does not consume the GitHub source budget. It still shares the wall-clock audit deadline.
+
+### Herdr CLI
+
+`herdr plugin list --json` is spawned with an argv array and `shell: false`. Its stdout is bounded by the Herdr CLI response cap, its stderr by the diagnostic body cap, and its runtime by the wall-clock deadline. Exceeding any bound terminates the child and fails explicitly rather than parsing a partial response.
 
 ### Base64 blobs
 

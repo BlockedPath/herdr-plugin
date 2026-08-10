@@ -34,6 +34,12 @@ A ref is data supplied only through `--ref`. GitHub `/tree/`, `/blob/`, issue, p
 
 Any other argument is treated as a local path only when it resolves to an existing directory.
 
+### Installed plugins
+
+`audit-installed <plugin-id>` accepts only a plugin ID matching `^[A-Za-z0-9][A-Za-z0-9._:-]*$`. Installed metadata comes from `herdr plugin list --json` through `HERDR_BIN_PATH`, spawned with an argv array and `shell: false`. X-Ray never reads Herdr's private registry, never guesses plugin roots, and fails with exit code 3 when Herdr is unavailable, returns an incompatible response, reports no matching plugin, reports duplicate plugin IDs, or reports a manifest that is not `herdr-plugin.toml` inside the reported plugin root.
+
+`--ref` applies only to GitHub sources and is a usage error for `audit-installed`.
+
 ## Common options
 
 ```text

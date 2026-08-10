@@ -9,12 +9,22 @@ import { RECEIPT_SCHEMA_VERSION, RULES_VERSION, VERSION } from "../meta.mjs";
 import { finalizeReceipt, sha256Value } from "../receipt/hash.mjs";
 import { redactReceipt } from "../receipt/redact.mjs";
 import { RULES } from "../rules/registry.mjs";
-import { openSource } from "../source/open.mjs";
+import { openInstalledSource, openSource } from "../source/open.mjs";
 
 const RULE_BY_ID = new Map(RULES.map((rule) => [rule.id, rule]));
 
 export async function auditSource(rawSource, options = {}) {
-	const opened = await openSource(rawSource, options);
+	return await auditOpened(await openSource(rawSource, options), options);
+}
+
+export async function auditInstalled(pluginId, options = {}) {
+	return await auditOpened(
+		await openInstalledSource(pluginId, options),
+		options,
+	);
+}
+
+async function auditOpened(opened, options) {
 	const { input, source } = opened;
 	const entries = await source.listEntries();
 	const manifestFile = await source.readFile("herdr-plugin.toml", {
@@ -116,7 +126,7 @@ export async function auditSource(rawSource, options = {}) {
 	];
 	const reachableComplete = !graphLimited && trace.complete;
 	const receiptGraph = mergeGraph(graph, trace, source.limits);
-	if (source.kind === "local") await source.verifyStable();
+	if (typeof source.verifyStable === "function") await source.verifyStable();
 
 	const unsafeEntries = entries.filter(
 		(entry) => entry.type === "symlink" || entry.type === "other",
@@ -206,9 +216,9 @@ export async function auditSource(rawSource, options = {}) {
 	);
 	const summary = summarize(findings);
 	const localRootHash =
-		input.kind === "local"
-			? sha256Value(files.map((file) => [file.path, file.sha256]))
-			: null;
+		input.kind === "github"
+			? null
+			: sha256Value(files.map((file) => [file.path, file.sha256]));
 	const receipt = {
 		schemaVersion: RECEIPT_SCHEMA_VERSION,
 		tool: { name: "herdr-xray", version: VERSION, rulesVersion: RULES_VERSION },
@@ -492,6 +502,25 @@ function sourceSubject(input, source, localRootHash) {
 			requestedRef: input.requestedRef,
 			resolvedCommit: source.resolvedCommit,
 			localRootHash: null,
+		};
+	}
+	if (input.kind === "installed") {
+		const upstream = input.installed;
+		const github = upstream?.kind === "github" && upstream.owner !== null && upstream.repo !== null;
+		return {
+			kind: "installed",
+			status: "resolved",
+			display: input.pluginId,
+			...(github
+				? {
+						owner: upstream.owner,
+						repo: upstream.repo,
+						subdir: upstream.subdir,
+						requestedRef: upstream.requestedRef,
+					}
+				: {}),
+			resolvedCommit: github ? upstream.resolvedCommit : null,
+			localRootHash,
 		};
 	}
 	return {

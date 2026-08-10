@@ -2,7 +2,7 @@ import { lstat, open, rename, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 
-import { auditSource } from "../audit/audit.mjs";
+import { auditInstalled, auditSource } from "../audit/audit.mjs";
 import { HARD_LIMITS } from "../config/limits.mjs";
 import { renderJson } from "../render/json.mjs";
 import { renderMarkdown } from "../render/markdown.mjs";
@@ -65,32 +65,44 @@ export async function main(argv, io = {}) {
 	}
 	const parsed = parseCommonArguments(argv.slice(1), positionalCounts[command]);
 	if (parsed.error !== null) return usageError(stderr, parsed.error);
-	if (command !== "audit") return notImplemented(stderr, command);
+	if (command !== "audit" && command !== "audit-installed") {
+		return notImplemented(stderr, command);
+	}
+	if (command === "audit-installed" && parsed.options.ref !== undefined) {
+		return usageError(stderr, "--ref is valid only for GitHub sources");
+	}
 
 	try {
-		const receipt = await auditSource(parsed.positionals[0], {
+		const auditOptions = {
 			cwd: io.cwd,
 			fetch: io.fetch,
 			ref: parsed.options.ref,
 			limits: parsed.options.limits,
 			redaction: parsed.options.redaction,
 			signal: io.signal,
-		});
-		const format = parsed.options.format ?? "terminal";
-		const rendered =
-			format === "json"
-				? renderJson(receipt)
-				: format === "markdown"
-					? renderMarkdown(receipt)
-					: renderTerminal(receipt);
+			spawn: io.spawn,
+			env: io.env,
+			herdrBinPath: io.herdrBinPath,
+		};
+		const receipt =
+			command === "audit-installed"
+				? await auditInstalled(parsed.positionals[0], auditOptions)
+				: await auditSource(parsed.positionals[0], auditOptions);
+		const rendered = render(receipt, parsed.options.format ?? "terminal");
 		if (parsed.options.output === undefined) stdout.write(rendered);
 		else await writeAtomic(parsed.options.output, rendered, io.cwd);
 		return policyExit(receipt, parsed.options);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		stderr.write(`herdr-xray: audit failed: ${message}\n`);
+		stderr.write(`herdr-xray: ${command} failed: ${message}\n`);
 		return EXIT.INCOMPLETE;
 	}
+}
+
+function render(receipt, format) {
+	if (format === "json") return renderJson(receipt);
+	if (format === "markdown") return renderMarkdown(receipt);
+	return renderTerminal(receipt);
 }
 
 function parseCommonArguments(args, expectedPositionals) {
