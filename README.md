@@ -8,9 +8,9 @@ X-Ray reports evidence and unknowns. It does **not** label plugins safe or malic
 
 ## Status
 
-Milestones 0–2 are complete, and Milestone 3 is in progress: `audit-installed` and `compare` both work. The CLI includes bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis, installed-plugin auditing through Herdr's public `plugin list --json` contract, and candidate-versus-installed execution-surface comparison.
+**v0.1.0** — Milestones 0–4 complete. The CLI and Herdr popup provide bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis; installed-plugin auditing via `herdr plugin list --json`; candidate-versus-installed comparison; marketplace collision enrichment; receipt verification and hashed persistence; and a popup UI.
 
-Marketplace collision enrichment, receipt verification, receipt persistence, and the Herdr popup remain planned. Unimplemented commands fail explicitly with exit code 3 rather than pretending to operate.
+All commands are implemented; no placeholder exit code 3 remains.
 
 ## Design constraints
 
