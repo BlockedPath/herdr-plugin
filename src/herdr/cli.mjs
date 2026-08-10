@@ -260,10 +260,7 @@ function plainObject(value) {
 
 function printable(value) {
 	return value
-		.replaceAll(
-			/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))/g,
-			"",
-		)
+		.replaceAll(/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))/g, "")
 		.replaceAll(/[\p{Cc}\p{Cf}]/gu, "\uFFFD");
 }
 

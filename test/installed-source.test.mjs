@@ -473,7 +473,10 @@ test("a herdr child that ignores SIGTERM is still terminated", {
 		await chmod(binary, 0o755);
 		await assert.rejects(
 			() =>
-				listInstalledPlugins({ herdrBinPath: binary, limits: { timeoutMs: 400 } }),
+				listInstalledPlugins({
+					herdrBinPath: binary,
+					limits: { timeoutMs: 400 },
+				}),
 			(error) => error.code === "herdr-timeout",
 		);
 		let recorded = null;
