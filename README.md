@@ -8,7 +8,7 @@ X-Ray reports evidence and unknowns. It does **not** label plugins safe or malic
 
 ## Status
 
-**v0.3.0** — Herdr X-Ray CLI (`v0.1.0`) + **Herdr Mixtape** popup. CLI: bounded audits, compare, marketplace, receipts. Popup: `Herdr Mixtape` — `git log` as Side A/B mixtape, `Enter` to play `git show`, Kitty-ready.
+**v0.4.0** — Herdr X-Ray CLI (`v0.1.0`) + **Log Tail** popup. CLI: bounded audits, compare, marketplace, receipts. Popup: `Log Tail` — tails all pane logs in workspace, error highlight, `e`/`f`/`filter`, `q`.
 
 All commands are implemented; no placeholder exit code 3 remains.
 
