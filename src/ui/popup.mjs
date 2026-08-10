@@ -136,6 +136,7 @@ rl.on("line", async (line) => {
 	}
 	const n = Number.parseInt(v, 10);
 	if (!Number.isNaN(n) && n >= 1 && n <= tracks.length) {
+		playClick();
 		const track = tracks[n - 1];
 		const show = await gitShow(root, track.hash);
 		process.stdout.write("\n" + show.slice(0, 4000) + "\n\n");
@@ -252,6 +253,18 @@ function crc32(buf) {
 	let c = 0xffffffff;
 	for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
 	return (c ^ 0xffffffff) >>> 0;
+}
+
+function playClick() {
+	try {
+		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff"], { stdio: "ignore", detached: true });
+		p.unref();
+		return;
+	} catch {}
+	try {
+		const p = spawn("paplay", ["/usr/share/sounds/freedesktop/stereo/message.oga"], { stdio: "ignore", detached: true });
+		p.unref();
+	} catch {}
 }
 
 const FONT = {
