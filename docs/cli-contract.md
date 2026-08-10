@@ -40,6 +40,16 @@ Any other argument is treated as a local path only when it resolves to an existi
 
 `--ref` applies only to GitHub sources and is a usage error for `audit-installed`.
 
+### Comparison
+
+`compare <plugin-id> <source>` audits the installed plugin and the candidate source with the same tool version, rules version, and limits, then reports their differences. `--ref` applies to the candidate only.
+
+The candidate receipt gains `subject.installedBaseline`, a `comparison` object with `baselineAnalysisHash` and bounded `changes`, and a `comparison` completeness dimension. Comparison never rewrites candidate analysis; it only adds identity findings and change records.
+
+Acquisition method is not identity. Upstream owner, repository, and subdirectory are compared only when both sides declare them; a local candidate is reported as `<unverifiable>` at low severity rather than as an ownership transfer. `xray.identity.source-changed` is reserved for a verifiable upstream change or a differing plugin ID.
+
+Exceeding `comparisonChanges` truncates the change list and marks the `comparison` dimension partial. A baseline without parsed plugin identity makes the dimension `unavailable` and exits 3.
+
 ## Common options
 
 ```text

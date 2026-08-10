@@ -43,6 +43,7 @@ These values are the Milestone 0 contract. Representative-plugin measurement may
 | Persisted evidence excerpt | 160 UTF-16 code units | 512 |
 | Marketplace response | 16 MiB | 32 MiB |
 | Herdr CLI response | 8 MiB | 32 MiB |
+| Comparison changes | 500 | 2,000 |
 | HTTP redirects | 0 | 0 |
 
 ## Accounting rules

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 
 import { auditInstalled, auditSource } from "../audit/audit.mjs";
+import { compareInstalled } from "../compare/compare.mjs";
 import { HARD_LIMITS } from "../config/limits.mjs";
 import { renderJson } from "../render/json.mjs";
 import { renderMarkdown } from "../render/markdown.mjs";
@@ -65,7 +66,11 @@ export async function main(argv, io = {}) {
 	}
 	const parsed = parseCommonArguments(argv.slice(1), positionalCounts[command]);
 	if (parsed.error !== null) return usageError(stderr, parsed.error);
-	if (command !== "audit" && command !== "audit-installed") {
+	if (
+		command !== "audit" &&
+		command !== "audit-installed" &&
+		command !== "compare"
+	) {
 		return notImplemented(stderr, command);
 	}
 	if (command === "audit-installed" && parsed.options.ref !== undefined) {
@@ -84,10 +89,16 @@ export async function main(argv, io = {}) {
 			env: io.env,
 			herdrBinPath: io.herdrBinPath,
 		};
-		const receipt =
-			command === "audit-installed"
-				? await auditInstalled(parsed.positionals[0], auditOptions)
-				: await auditSource(parsed.positionals[0], auditOptions);
+		const receipt = await run(command, parsed.positionals, auditOptions);
+		if (
+			command === "compare" &&
+			receipt.completeness.dimensions.comparison.status === "unavailable"
+		) {
+			stderr.write(
+				`herdr-xray: compare failed: ${receipt.completeness.dimensions.comparison.reason}\n`,
+			);
+			return EXIT.INCOMPLETE;
+		}
 		const rendered = render(receipt, parsed.options.format ?? "terminal");
 		if (parsed.options.output === undefined) stdout.write(rendered);
 		else await writeAtomic(parsed.options.output, rendered, io.cwd);
@@ -97,6 +108,16 @@ export async function main(argv, io = {}) {
 		stderr.write(`herdr-xray: ${command} failed: ${message}\n`);
 		return EXIT.INCOMPLETE;
 	}
+}
+
+async function run(command, positionals, options) {
+	if (command === "audit-installed") {
+		return await auditInstalled(positionals[0], options);
+	}
+	if (command === "compare") {
+		return await compareInstalled(positionals[0], positionals[1], options);
+	}
+	return await auditSource(positionals[0], options);
 }
 
 function render(receipt, format) {

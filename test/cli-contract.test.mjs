@@ -53,7 +53,6 @@ test("unknown commands are usage errors on stderr", async () => {
 
 test("unimplemented planned commands fail explicitly during Milestone 1", async () => {
 	for (const argv of [
-		["compare", "example.plugin", "owner/repo", "--ref", "main"],
 		["marketplace-collisions", "--offline"],
 		["receipt", "verify", "receipt.json"],
 	]) {
@@ -79,6 +78,7 @@ test("malformed planned commands are usage errors", async () => {
 		["audit-installed", "a", "b"],
 		["audit-installed", "example.plugin", "--ref", "main"],
 		["compare", "example.plugin"],
+		["compare", "example.plugin", "owner/repo", "extra"],
 		["marketplace-collisions", "extra"],
 		["receipt", "wat", "receipt.json"],
 		["receipt", "verify"],

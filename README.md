@@ -8,9 +8,9 @@ X-Ray reports evidence and unknowns. It does **not** label plugins safe or malic
 
 ## Status
 
-Milestones 0–2 are complete, and Milestone 3 has begun with `audit-installed`. The CLI now includes bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis, plus installed-plugin auditing through Herdr's public `plugin list --json` contract.
+Milestones 0–2 are complete, and Milestone 3 is in progress: `audit-installed` and `compare` both work. The CLI includes bounded recursive JavaScript, shell, Python, PowerShell, Batch, package-lifecycle, network, environment, filesystem, and opaque-binary analysis, installed-plugin auditing through Herdr's public `plugin list --json` contract, and candidate-versus-installed execution-surface comparison.
 
-Candidate-versus-installed comparison, marketplace collision enrichment, receipt verification, and the Herdr popup remain planned. Unimplemented commands fail explicitly with exit code 3 rather than pretending to operate.
+Marketplace collision enrichment, receipt verification, receipt persistence, and the Herdr popup remain planned. Unimplemented commands fail explicitly with exit code 3 rather than pretending to operate.
 
 ## Design constraints
 
@@ -35,12 +35,12 @@ node bin/herdr-xray.mjs version
 node bin/herdr-xray.mjs audit owner/repo[/subdir] --ref <ref>
 node bin/herdr-xray.mjs audit ./local/plugin --format json
 node bin/herdr-xray.mjs audit-installed <plugin-id>
+node bin/herdr-xray.mjs compare <plugin-id> owner/repo --ref <ref>
 ```
 
 Planned additional stable interface:
 
 ```bash
-herdr-xray compare <plugin-id> owner/repo --ref <ref>
 herdr-xray marketplace-collisions
 herdr-xray receipt verify receipt.json
 ```

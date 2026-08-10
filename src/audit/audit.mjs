@@ -8,10 +8,8 @@ import { validateManifest } from "../manifest/validate.mjs";
 import { RECEIPT_SCHEMA_VERSION, RULES_VERSION, VERSION } from "../meta.mjs";
 import { finalizeReceipt, sha256Value } from "../receipt/hash.mjs";
 import { redactReceipt } from "../receipt/redact.mjs";
-import { RULES } from "../rules/registry.mjs";
+import { createFinding } from "../rules/finding.mjs";
 import { openInstalledSource, openSource } from "../source/open.mjs";
-
-const RULE_BY_ID = new Map(RULES.map((rule) => [rule.id, rule]));
 
 export async function auditSource(rawSource, options = {}) {
 	return await auditOpened(await openSource(rawSource, options), options);
@@ -433,29 +431,7 @@ function sourceIssueFindings(issues, limit = Number.POSITIVE_INFINITY) {
 }
 
 function finding(ruleId, title, explanation, subject, evidence = {}) {
-	const rule = RULE_BY_ID.get(ruleId);
-	if (rule === undefined)
-		throw new Error(`missing rule registration: ${ruleId}`);
-	return Object.freeze({
-		id: `finding:${sha256Value([ruleId, subject]).slice(7, 31)}`,
-		ruleId,
-		class: rule.classification,
-		severity: rule.severity,
-		confidence: evidence.confidence ?? "high",
-		category: rule.category,
-		title: String(title).slice(0, 256),
-		explanation: String(explanation).slice(0, 2048),
-		evidence: [
-			{
-				path: evidence.path ?? "herdr-plugin.toml",
-				line: evidence.line ?? null,
-				column: null,
-				excerpt: evidence.excerpt ?? null,
-			},
-		],
-		remediation:
-			"Review the referenced manifest declaration and reachable source before installation.",
-	});
+	return createFinding(ruleId, title, explanation, subject, evidence);
 }
 
 function mergeGraph(base, trace, limits) {

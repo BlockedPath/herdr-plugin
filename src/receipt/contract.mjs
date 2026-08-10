@@ -7,6 +7,11 @@ export const CORE_COMPLETENESS_DIMENSIONS = Object.freeze([
 	"cleanup",
 ]);
 
+export const OPTIONAL_COMPLETENESS_DIMENSIONS = Object.freeze([
+	"marketplace",
+	"comparison",
+]);
+
 const SHA_PATTERN = /^[0-9a-f]{40,64}$/;
 
 export function validateReceiptContract(receipt) {
@@ -53,7 +58,14 @@ export function validateReceiptContract(receipt) {
 			"completeness.dimensions",
 			errors,
 		);
-		for (const name of CORE_COMPLETENESS_DIMENSIONS) {
+		for (const name of Object.keys(dimensions)) {
+			if (
+				!CORE_COMPLETENESS_DIMENSIONS.includes(name) &&
+				!OPTIONAL_COMPLETENESS_DIMENSIONS.includes(name)
+			) {
+				errors.push(`completeness.dimensions has an unknown dimension ${name}`);
+				continue;
+			}
 			validateCompletenessStatus(dimensions[name], name, errors);
 		}
 	}

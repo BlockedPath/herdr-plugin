@@ -28,6 +28,7 @@ export const DEFAULT_LIMITS = Object.freeze({
 	evidenceExcerptCodeUnits: 160,
 	marketplaceResponseBytes: 16 * 1024 * 1024,
 	herdrResponseBytes: 8 * 1024 * 1024,
+	comparisonChanges: 500,
 	httpRedirects: 0,
 });
 
@@ -61,6 +62,7 @@ export const HARD_LIMITS = Object.freeze({
 	evidenceExcerptCodeUnits: 512,
 	marketplaceResponseBytes: 32 * 1024 * 1024,
 	herdrResponseBytes: 32 * 1024 * 1024,
+	comparisonChanges: 2_000,
 	httpRedirects: 0,
 });
 

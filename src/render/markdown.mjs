@@ -16,6 +16,21 @@ export function renderMarkdown(receipt) {
 			`- \`${escape(node.label)}\` — ${node.effectivePlatforms.join(", ")}`,
 		);
 	}
+	if (receipt.comparison !== null) {
+		lines.push("", "## Changes since the installed version", "");
+		if (receipt.comparison.changes.length === 0) {
+			lines.push("No execution-surface changes were observed.");
+		}
+		for (const entry of receipt.comparison.changes) {
+			lines.push(
+				`- **${entry.severity}** — ${entry.change} ${entry.kind}: ${escape(entry.subject)}`,
+			);
+		}
+		lines.push(
+			"",
+			`Baseline analysis hash: \`${receipt.comparison.baselineAnalysisHash}\``,
+		);
+	}
 	lines.push("", "## Findings", "");
 	if (receipt.findings.length === 0) lines.push("None.");
 	for (const finding of receipt.findings) {
