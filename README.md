@@ -36,13 +36,8 @@ node bin/herdr-xray.mjs audit owner/repo[/subdir] --ref <ref>
 node bin/herdr-xray.mjs audit ./local/plugin --format json
 node bin/herdr-xray.mjs audit-installed <plugin-id>
 node bin/herdr-xray.mjs compare <plugin-id> owner/repo --ref <ref>
-```
-
-Planned additional stable interface:
-
-```bash
-herdr-xray marketplace-collisions
-herdr-xray receipt verify receipt.json
+node bin/herdr-xray.mjs marketplace-collisions
+node bin/herdr-xray.mjs receipt verify receipt.json
 ```
 
 See [`docs/cli-contract.md`](docs/cli-contract.md) for output and exit-code guarantees.
@@ -65,6 +60,12 @@ The test suite uses only Node’s built-in test runner.
 - [`docs/rules.md`](docs/rules.md) — fact/heuristic/unknown taxonomy and stable rule IDs
 - [`docs/analyzers.md`](docs/analyzers.md) — analyzer coverage, recursion, bounds, and limitations
 - [`docs/herdr-contract.md`](docs/herdr-contract.md) — Herdr 0.8.0/protocol-19 public contract baseline
+- [`docs/usage.md`](docs/usage.md) — install, quick start, popup, interpretation
+- [`docs/json-integration.md`](docs/json-integration.md) — receipt schema, `receipt verify`, manager integration
+- [`docs/limitations.md`](docs/limitations.md) — what X-Ray does not do
+- [`docs/manual-smoke.md`](docs/manual-smoke.md) — three-platform smoke checklist
+- [`docs/regression-corpus.md`](docs/regression-corpus.md) — pinned marketplace corpus
+- [`docs/threat-model-checklist.md`](docs/threat-model-checklist.md) — invariant → test mapping
 - [`schemas/receipt-v1.schema.json`](schemas/receipt-v1.schema.json) — draft trust-receipt schema
 - `vendor/toml/PROVENANCE.md` — vendored parser source, license, hashes, and review
 
@@ -81,9 +82,9 @@ The product direction follows a metadata-complete review of the current Herdr ma
 1. **Milestone 0 — contracts and threat model:** complete
 2. **Milestone 1 — fact-only CLI vertical slice:** complete
 3. **Milestone 2 — bounded analyzers and findings:** complete
-4. **Milestone 3 — installed comparison and trust receipts:** in progress
-5. **Milestone 4 — Herdr popup integration**
-6. **Milestone 5 — hardening and stable release**
+4. **Milestone 3 — installed comparison and trust receipts:** complete
+5. **Milestone 4 — Herdr popup integration:** complete
+6. **Milestone 5 — hardening and stable release:** complete (docs, corpus, 114 tests, 3-platform CI)
 
 ## License
 

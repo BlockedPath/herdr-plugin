@@ -23,7 +23,10 @@ id = "warm"
 title = "Warm box"
 command = ["node", "warm.mjs"]
 `,
-		files: { "warm.mjs": `import "./helper.mjs";\nfetch("https://example.test/warm");\n`, "helper.mjs": "export const h=1;\n" },
+		files: {
+			"warm.mjs": `import "./helper.mjs";\nfetch("https://example.test/warm");\n`,
+			"helper.mjs": "export const h=1;\n",
+		},
 	},
 	{
 		name: "herdr-file-viewer — Rust TUI",
@@ -90,7 +93,10 @@ id = "open"
 title = "Open"
 command = ["node", "open.mjs"]
 `,
-		files: { "serve.mjs": `import "node:http";\n`, "open.mjs": `export const v=1;\n` },
+		files: {
+			"serve.mjs": `import "node:http";\n`,
+			"open.mjs": `export const v=1;\n`,
+		},
 	},
 	{
 		name: "large and opaque — limit and WASM",
