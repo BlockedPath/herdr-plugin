@@ -257,12 +257,19 @@ function crc32(buf) {
 
 function playClick() {
 	try {
-		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff"], { stdio: "ignore", detached: true });
+		const p = spawn("afplay", ["/System/Library/Sounds/Pop.aiff"], {
+			stdio: "ignore",
+			detached: true,
+		});
 		p.unref();
 		return;
 	} catch {}
 	try {
-		const p = spawn("paplay", ["/usr/share/sounds/freedesktop/stereo/message.oga"], { stdio: "ignore", detached: true });
+		const p = spawn(
+			"paplay",
+			["/usr/share/sounds/freedesktop/stereo/message.oga"],
+			{ stdio: "ignore", detached: true },
+		);
 		p.unref();
 	} catch {}
 }
