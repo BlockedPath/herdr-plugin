@@ -422,7 +422,9 @@ function sourceIssueFindings(issues, limit = Number.POSITIVE_INFINITY) {
 		.slice(0, limit)
 		.map((entry) =>
 			finding(
-				"xray.dynamic.resource-limit",
+				entry.code === "upstream-unverified"
+					? "xray.identity.upstream-unverified"
+					: "xray.dynamic.resource-limit",
 				entry.message,
 				entry.message,
 				entry.code,

@@ -225,6 +225,63 @@ test("herdr invocation uses argv without a shell and bounds its response", async
 	);
 });
 
+test("unverifiable upstream identity is bounded, charset-checked, and reported", async () => {
+	const [hostile] = parsePluginList(
+		envelope([
+			{
+				...pluginRecord("/x"),
+				source: {
+					kind: "github",
+					owner: "a.b-c ".repeat(60),
+					repo: "r\u001b[31mEVIL\u0007\n\u202ereversed",
+					subdir: "../escape",
+					requested_ref: "m\u0000ain",
+					resolved_commit: "HEAD",
+				},
+			},
+		]),
+	);
+	assert.equal(hostile.source.owner, null);
+	assert.equal(hostile.source.repo, null);
+	assert.equal(hostile.source.subdir, null);
+	assert.equal(hostile.source.requestedRef, null);
+	assert.equal(hostile.source.resolvedCommit, null);
+	assert.equal(hostile.source.unverified, true);
+
+	const [tooLong] = parsePluginList(
+		envelope([
+			{
+				...pluginRecord("/x"),
+				source: { kind: "github", owner: "o".repeat(101), repo: "r" },
+			},
+		]),
+	);
+	assert.equal(tooLong.source.owner, null);
+
+	await withInstalledPlugin(async (root) => {
+		const receipt = await auditInstalled("example.installed", {
+			plugins: parsePluginList(
+				envelope([
+					pluginRecord(root, {
+						source: { kind: "github", owner: "o".repeat(101), repo: "r" },
+					}),
+				]),
+			),
+		});
+		assert.deepEqual(validateReceiptContract(receipt), []);
+		assert.equal(Object.hasOwn(receipt.subject.source, "owner"), false);
+		assert.equal(receipt.completeness.complete, false);
+		assert.equal(
+			receipt.findings.some(
+				(entry) => entry.ruleId === "xray.identity.upstream-unverified",
+			),
+			true,
+		);
+		const serialized = JSON.stringify(receipt);
+		assert.equal(/\u001b|\u0007|\u202e/.test(serialized), false);
+	});
+});
+
 test("installed resolution fails explicitly instead of guessing plugin roots", async () => {
 	await withInstalledPlugin(async (root) => {
 		const plugins = parsePluginList(envelope([pluginRecord(root)]));
@@ -388,6 +445,64 @@ test("audit-installed CLI renders JSON, rejects --ref, and reports Herdr failure
 			EXIT.INCOMPLETE,
 		);
 		assert.match(stderr, /audit-installed failed/);
+
+		let hostile = "";
+		await main(["audit-installed", "example.installed"], {
+			stdout: { write: () => {} },
+			stderr: { write: (text) => (hostile += text) },
+			spawn: fakeSpawn({
+				status: 1,
+				stderr: "\u001b[2J\u001b]0;PWNED\u0007boom",
+			}).spawn,
+		});
+		assert.equal(/\u001b|\u0007/.test(hostile), false);
+		assert.match(hostile, /boom/);
+	});
+});
+
+test("a herdr child that ignores SIGTERM is still terminated", {
+	skip: process.platform === "win32",
+}, async () => {
+	await withInstalledPlugin(async (root) => {
+		const binary = join(root, "stubborn-herdr");
+		const pidFile = join(root, "child.pid");
+		await writeFile(
+			binary,
+			`#!/bin/sh\ntrap '' TERM\necho $$ > ${JSON.stringify(pidFile)}\nsleep 30\n`,
+		);
+		await chmod(binary, 0o755);
+		await assert.rejects(
+			() =>
+				listInstalledPlugins({ herdrBinPath: binary, limits: { timeoutMs: 400 } }),
+			(error) => error.code === "herdr-timeout",
+		);
+		let recorded = null;
+		for (let attempt = 0; attempt < 30 && recorded === null; attempt += 1) {
+			recorded = await readFile(pidFile, "utf8").catch(() => null);
+			if (recorded === null) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+		}
+		assert.notEqual(recorded, null, "the child must report its pid");
+		const pid = Number.parseInt(recorded, 10);
+		assert.ok(Number.isInteger(pid));
+		let alive = true;
+		for (let attempt = 0; attempt < 40 && alive; attempt += 1) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			try {
+				process.kill(pid, 0);
+			} catch {
+				alive = false;
+			}
+		}
+		if (alive) {
+			try {
+				process.kill(pid, "SIGKILL");
+			} catch {
+				// Already gone between the probe and cleanup.
+			}
+		}
+		assert.equal(alive, false, "a SIGTERM-ignoring herdr child must be killed");
 	});
 });
 

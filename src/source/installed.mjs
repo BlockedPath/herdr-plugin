@@ -1,4 +1,4 @@
-import { realpath } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import { join } from "node:path";
 
 import { listInstalledPlugins } from "../herdr/cli.mjs";
@@ -53,6 +53,7 @@ export async function resolveInstalledInput(pluginId, options = {}) {
 			`installed manifest is not ${MANIFEST_NAME} inside the reported plugin root`,
 		);
 	}
+	await refuseLink(join(root, MANIFEST_NAME));
 	return Object.freeze({
 		kind: "installed",
 		pluginId,
@@ -83,6 +84,21 @@ async function resolvePath(value, code, label) {
 		throw new InstalledSourceError(
 			code,
 			`could not resolve ${label}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}
+
+async function refuseLink(path) {
+	const metadata = await lstat(path).catch((error) => {
+		throw new InstalledSourceError(
+			"installed-manifest-unavailable",
+			`could not inspect ${MANIFEST_NAME}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	});
+	if (!metadata.isFile()) {
+		throw new InstalledSourceError(
+			"installed-manifest-not-regular",
+			`${MANIFEST_NAME} inside the plugin root is not a regular file`,
 		);
 	}
 }

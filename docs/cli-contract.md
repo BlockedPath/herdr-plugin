@@ -36,7 +36,7 @@ Any other argument is treated as a local path only when it resolves to an existi
 
 ### Installed plugins
 
-`audit-installed <plugin-id>` accepts only a plugin ID matching `^[A-Za-z0-9][A-Za-z0-9._:-]*$`. Installed metadata comes from `herdr plugin list --json` through `HERDR_BIN_PATH`, spawned with an argv array and `shell: false`. X-Ray never reads Herdr's private registry, never guesses plugin roots, and fails with exit code 3 when Herdr is unavailable, returns an incompatible response, reports no matching plugin, reports duplicate plugin IDs, or reports a manifest that is not `herdr-plugin.toml` inside the reported plugin root.
+`audit-installed <plugin-id>` accepts only a plugin ID matching `^[A-Za-z0-9][A-Za-z0-9._:-]*$`. Installed metadata comes from `herdr plugin list --json`, spawned with an argv array and `shell: false`, using `HERDR_BIN_PATH` when set and otherwise `herdr` from `PATH`. Herdr-reported upstream owner, repository, subdirectory, ref, and commit values are length- and charset-validated; unusable values are dropped and reported as `xray.identity.upstream-unverified` rather than copied into the receipt. X-Ray never reads Herdr's private registry, never guesses plugin roots, and fails with exit code 3 when Herdr is unavailable, returns an incompatible response, reports no matching plugin, reports duplicate plugin IDs, or reports a manifest that is not `herdr-plugin.toml` inside the reported plugin root.
 
 `--ref` applies only to GitHub sources and is a usage error for `audit-installed`.
 

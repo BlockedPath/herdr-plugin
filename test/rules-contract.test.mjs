@@ -27,7 +27,7 @@ test("rule registry uses stable unique IDs and valid dimensions", () => {
 		assert.equal(categories.has(rule.category), true, rule.id);
 		assert.equal(Object.isFrozen(rule), true, rule.id);
 	}
-	assert.equal(ids.size, 29);
+	assert.equal(ids.size, 30);
 });
 
 test("registry contains facts, heuristics, and explicit unknowns", () => {

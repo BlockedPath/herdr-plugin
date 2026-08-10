@@ -28,6 +28,7 @@ export const RULES = Object.freeze([
 	rule("xray.identity.source-changed", "fact", "high", "identity"),
 	rule("xray.identity.platform-changed", "fact", "medium", "identity"),
 	rule("xray.identity.herdr-version-changed", "fact", "low", "identity"),
+	rule("xray.identity.upstream-unverified", "unknown", "medium", "identity"),
 ]);
 
 function rule(id, classification, severity, category) {

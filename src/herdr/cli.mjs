@@ -4,7 +4,10 @@ import { resolveLimits } from "../config/limits.mjs";
 
 const CONTROL_PATTERN = /\p{C}/u;
 const COMMIT_PATTERN = /^[0-9a-f]{40,64}$/;
+const GITHUB_PART_PATTERN = /^[A-Za-z0-9_.-]{1,100}$/;
+const PATH_SEGMENT_PATTERN = /^[A-Za-z0-9_.-]+$/;
 const REQUIRED_PLUGIN_FIELDS = ["plugin_id", "manifest_path", "plugin_root"];
+const SIGKILL_GRACE_MS = 500;
 
 export class HerdrCliError extends Error {
 	constructor(code, message, details = {}) {
@@ -88,18 +91,48 @@ function normalizePlugin(entry, index) {
 
 function normalizeSource(source) {
 	if (source === null) return null;
-	const resolvedCommit = optionalString(source.resolved_commit);
-	return Object.freeze({
-		kind: optionalString(source.kind),
-		owner: optionalString(source.owner),
-		repo: optionalString(source.repo),
-		subdir: optionalString(source.subdir),
-		requestedRef: optionalString(source.requested_ref),
-		resolvedCommit:
-			resolvedCommit !== null && COMMIT_PATTERN.test(resolvedCommit)
-				? resolvedCommit
-				: null,
-	});
+	const owner = matching(source.owner, GITHUB_PART_PATTERN);
+	const repo = matching(source.repo, GITHUB_PART_PATTERN);
+	const normalized = {
+		kind: bounded(source.kind, 64),
+		owner,
+		repo,
+		subdir: subdirectory(source.subdir),
+		requestedRef: bounded(source.requested_ref, 512),
+		resolvedCommit: matching(source.resolved_commit, COMMIT_PATTERN),
+	};
+	// Herdr-reported upstream identity is unverified input. Any field that cannot
+	// satisfy the published receipt schema is dropped rather than propagated.
+	normalized.unverified =
+		normalized.kind === "github" &&
+		(owner === null || repo === null || normalized.resolvedCommit === null);
+	return Object.freeze(normalized);
+}
+
+function subdirectory(value) {
+	const subdir = bounded(value, 1024);
+	if (subdir === null) return null;
+	const segments = subdir.split("/");
+	return segments.every(
+		(segment) =>
+			segment !== "." && segment !== ".." && PATH_SEGMENT_PATTERN.test(segment),
+	)
+		? subdir
+		: null;
+}
+
+function bounded(value, maxLength) {
+	return typeof value === "string" &&
+		value.length > 0 &&
+		value.length <= maxLength &&
+		!CONTROL_PATTERN.test(value)
+		? value
+		: null;
+}
+
+function matching(value, pattern) {
+	const text = bounded(value, 1024);
+	return text !== null && pattern.test(text) ? text : null;
 }
 
 async function runHerdr(argv, options) {
@@ -138,19 +171,41 @@ async function runHerdr(argv, options) {
 			);
 		}, limits.timeoutMs);
 
+		function release() {
+			for (const stream of [child.stdout, child.stderr]) {
+				stream?.removeAllListeners?.("data");
+				stream?.destroy?.();
+			}
+			child.unref?.();
+		}
+
+		function terminate() {
+			send("SIGTERM");
+			if (child.exitCode !== null && child.exitCode !== undefined) return;
+			// A child that ignores SIGTERM must not outlive its bounded deadline.
+			const escalation = setTimeout(() => send("SIGKILL"), SIGKILL_GRACE_MS);
+			child.once?.("exit", () => clearTimeout(escalation));
+		}
+
+		function send(signal) {
+			try {
+				child.kill(signal);
+			} catch {
+				// The process already exited; nothing to terminate.
+			}
+		}
+
 		function finish(error, value) {
 			if (settled) return;
 			settled = true;
 			clearTimeout(timer);
 			if (error !== null) {
-				try {
-					child.kill();
-				} catch {
-					// The process already exited; nothing to terminate.
-				}
+				terminate();
+				release();
 				reject(error);
 				return;
 			}
+			release();
 			resolve(value);
 		}
 
@@ -189,7 +244,7 @@ async function runHerdr(argv, options) {
 			finish(
 				new HerdrCliError(
 					"herdr-exit-status",
-					`herdr exited with status ${code}${stderrText === "" ? "" : `: ${stderrText.trim()}`}`,
+					`herdr exited with status ${code}${stderrText === "" ? "" : `: ${printable(stderrText.trim())}`}`,
 					{ status: code },
 				),
 			);
@@ -203,8 +258,13 @@ function plainObject(value) {
 		: null;
 }
 
-function optionalString(value) {
-	return typeof value === "string" && value.length > 0 ? value : null;
+function printable(value) {
+	return value
+		.replaceAll(
+			/\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))/g,
+			"",
+		)
+		.replaceAll(/[\p{Cc}\p{Cf}]/gu, "\uFFFD");
 }
 
 function message(error) {

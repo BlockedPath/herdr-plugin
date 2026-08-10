@@ -25,5 +25,16 @@ export async function openInstalledSource(pluginId, options = {}) {
 		kind: "installed",
 		limits: options.limits,
 	});
+	if (input.installed?.unverified === true) {
+		source.issues = [
+			{
+				code: "upstream-unverified",
+				message:
+					"herdr reported a GitHub install whose owner, repository, or commit could not be validated",
+				path: null,
+				provenance: { declaration: "installed-source" },
+			},
+		];
+	}
 	return Object.freeze({ input, source });
 }

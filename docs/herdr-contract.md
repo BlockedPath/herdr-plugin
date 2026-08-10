@@ -82,7 +82,9 @@ Sanitized schema fixture: [`../test/fixtures/herdr-0.8.0/plugin-pane-open.schema
 
 ## Runtime rules
 
-- Locate Herdr through `HERDR_BIN_PATH` during plugin execution.
+- Locate Herdr through `HERDR_BIN_PATH` during plugin execution. When the variable is unset — standalone CLI use outside a Herdr-launched process — fall back to `herdr` resolved from `PATH`, and reject any configured value containing control characters. On Windows, `CreateProcess` searches the application and current directory before `PATH`, so prefer setting `HERDR_BIN_PATH` explicitly there.
+- Treat every field of `plugin list --json` as unverified input: bound its length, validate its charset, and drop values that cannot satisfy the published receipt schema instead of copying them into a receipt.
+- Terminate a child that exceeds its response or time budget, escalating past `SIGTERM` so an unresponsive process cannot outlive the deadline, and sanitize captured stderr before display.
 - Spawn with argv arrays and `shell: false`.
 - Treat malformed JSON, protocol incompatibility, or missing required fields as explicit errors.
 - Never construct raw socket/named-pipe requests in v1.
