@@ -506,7 +506,10 @@ function sourceSubject(input, source, localRootHash) {
 	}
 	if (input.kind === "installed") {
 		const upstream = input.installed;
-		const github = upstream?.kind === "github" && upstream.owner !== null && upstream.repo !== null;
+		const github =
+			upstream?.kind === "github" &&
+			upstream.owner !== null &&
+			upstream.repo !== null;
 		return {
 			kind: "installed",
 			status: "resolved",

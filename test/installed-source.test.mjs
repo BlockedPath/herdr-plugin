@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { chmod, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+	chmod,
+	mkdtemp,
+	readFile,
+	rm,
+	symlink,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -136,7 +143,12 @@ test("plugin-list parsing keeps unverifiable upstream identity explicit", () => 
 		envelope([
 			{
 				...pluginRecord("/x"),
-				source: { kind: "github", owner: "o", repo: "r", resolved_commit: "HEAD" },
+				source: {
+					kind: "github",
+					owner: "o",
+					repo: "r",
+					resolved_commit: "HEAD",
+				},
 			},
 		]),
 	);
@@ -156,7 +168,9 @@ test("herdr binary resolution prefers HERDR_BIN_PATH and rejects unsafe values",
 });
 
 test("herdr invocation uses argv without a shell and bounds its response", async () => {
-	const ok = fakeSpawn({ stdout: JSON.stringify(envelope([pluginRecord("/x")])) });
+	const ok = fakeSpawn({
+		stdout: JSON.stringify(envelope([pluginRecord("/x")])),
+	});
 	const plugins = await listInstalledPlugins({
 		spawn: ok.spawn,
 		herdrBinPath: "/opt/herdr",
@@ -187,7 +201,8 @@ test("herdr invocation uses argv without a shell and bounds its response", async
 				spawn: fakeSpawn({ status: 3, stderr: "no such command" }).spawn,
 			}),
 		(error) =>
-			error.code === "herdr-exit-status" && /no such command/.test(error.message),
+			error.code === "herdr-exit-status" &&
+			/no such command/.test(error.message),
 	);
 	await assert.rejects(
 		() =>
@@ -197,13 +212,15 @@ test("herdr invocation uses argv without a shell and bounds its response", async
 		(error) => error.code === "herdr-unavailable",
 	);
 	await assert.rejects(
-		() => listInstalledPlugins({ spawn: fakeSpawn({ throwOnSpawn: true }).spawn }),
+		() =>
+			listInstalledPlugins({ spawn: fakeSpawn({ throwOnSpawn: true }).spawn }),
 		(error) => error.code === "herdr-unavailable",
 	);
 
 	const stalled = fakeSpawn({ stall: true });
 	await assert.rejects(
-		() => listInstalledPlugins({ spawn: stalled.spawn, limits: { timeoutMs: 25 } }),
+		() =>
+			listInstalledPlugins({ spawn: stalled.spawn, limits: { timeoutMs: 25 } }),
 		(error) => error.code === "herdr-timeout",
 	);
 });
@@ -279,7 +296,7 @@ test("installed manifests outside the reported root are refused", async () => {
 				(error) => error.code === "installed-manifest-outside-root",
 			);
 		},
-		{ "elsewhere.toml": "id = \"other\"\n" },
+		{ "elsewhere.toml": 'id = "other"\n' },
 	);
 });
 
@@ -333,7 +350,10 @@ test("audit-installed CLI renders JSON, rejects --ref, and reports Herdr failure
 
 		const ok = capture();
 		assert.equal(
-			await main(["audit-installed", "example.installed", "--format", "json"], ok.io),
+			await main(
+				["audit-installed", "example.installed", "--format", "json"],
+				ok.io,
+			),
 			EXIT.OK,
 		);
 		let receipt;
@@ -353,7 +373,10 @@ test("audit-installed CLI renders JSON, rejects --ref, and reports Herdr failure
 			),
 			EXIT.USAGE,
 		);
-		assert.match(withRef.output().stderr, /--ref is valid only for GitHub sources/);
+		assert.match(
+			withRef.output().stderr,
+			/--ref is valid only for GitHub sources/,
+		);
 
 		let stderr = "";
 		assert.equal(
@@ -368,7 +391,9 @@ test("audit-installed CLI renders JSON, rejects --ref, and reports Herdr failure
 	});
 });
 
-test("audit-installed reads a real Herdr process on POSIX hosts", { skip: process.platform === "win32" }, async () => {
+test("audit-installed reads a real Herdr process on POSIX hosts", {
+	skip: process.platform === "win32",
+}, async () => {
 	await withInstalledPlugin(async (root) => {
 		const binary = join(root, "fake-herdr");
 		await writeFile(
@@ -384,7 +409,9 @@ test("audit-installed reads a real Herdr process on POSIX hosts", { skip: proces
 	});
 });
 
-test("installed sources still refuse symlinked plugin content", { skip: process.platform === "win32" }, async () => {
+test("installed sources still refuse symlinked plugin content", {
+	skip: process.platform === "win32",
+}, async () => {
 	await withInstalledPlugin(async (root) => {
 		await symlink("/etc/hosts", join(root, "linked.mjs"));
 		const receipt = await auditInstalled("example.installed", {
@@ -392,7 +419,9 @@ test("installed sources still refuse symlinked plugin content", { skip: process.
 		});
 		assert.equal(receipt.completeness.complete, false);
 		assert.equal(
-			receipt.findings.some((entry) => /symlink/i.test(entry.ruleId + entry.title)),
+			receipt.findings.some((entry) =>
+				/symlink/i.test(entry.ruleId + entry.title),
+			),
 			true,
 		);
 	});
