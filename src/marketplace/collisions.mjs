@@ -8,7 +8,9 @@ export function findCollisions(candidateId, marketplaceData) {
 		for (const manifest of repo.manifests) {
 			if (manifest?.id === normalized) {
 				collisions.push({
-					fullName: repo.fullName ?? `${repo.owner ?? "unknown"}/${repo.name ?? "unknown"}`,
+					fullName:
+						repo.fullName ??
+						`${repo.owner ?? "unknown"}/${repo.name ?? "unknown"}`,
 					manifest,
 					repo,
 				});

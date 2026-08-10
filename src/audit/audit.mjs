@@ -252,7 +252,9 @@ async function auditOpened(opened, options) {
 		analysisHash: "",
 		receiptHash: "",
 	};
-	let final = finalizeReceipt(redactReceipt(receipt, options.redaction ?? "strict"));
+	let final = finalizeReceipt(
+		redactReceipt(receipt, options.redaction ?? "strict"),
+	);
 	if (options.marketplaceCheck && options.marketplaceCheck !== "off") {
 		try {
 			final = await enrichWithMarketplace(final, options);

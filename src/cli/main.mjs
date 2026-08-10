@@ -315,7 +315,9 @@ function findDuplicateIds(marketplaceData) {
 		for (const manifest of repo.manifests ?? []) {
 			if (!manifest?.id) continue;
 			const list = byId.get(manifest.id) ?? [];
-			list.push(repo.fullName ?? `${repo.owner ?? "unknown"}/${repo.name ?? "unknown"}`);
+			list.push(
+				repo.fullName ?? `${repo.owner ?? "unknown"}/${repo.name ?? "unknown"}`,
+			);
 			byId.set(manifest.id, list);
 		}
 	}
@@ -327,10 +329,12 @@ function findDuplicateIds(marketplaceData) {
 
 function renderCollisions(collisions, format) {
 	if (format === "json") return `${JSON.stringify({ collisions }, null, 2)}\n`;
-	if (collisions.length === 0) return "No marketplace plugin ID collisions found.\n";
+	if (collisions.length === 0)
+		return "No marketplace plugin ID collisions found.\n";
 	const lines = ["Marketplace plugin ID collisions:", ""];
 	for (const entry of collisions) {
-		if (format === "markdown") lines.push(`- \`${entry.id}\`: ${entry.repos.join(", ")}`);
+		if (format === "markdown")
+			lines.push(`- \`${entry.id}\`: ${entry.repos.join(", ")}`);
 		else lines.push(`- ${entry.id}: ${entry.repos.join(", ")}`);
 	}
 	return `${lines.join("\n")}\n`;

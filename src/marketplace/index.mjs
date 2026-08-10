@@ -10,7 +10,9 @@ export async function getMarketplace(options = {}) {
 	try {
 		const data = await fetchMarketplace(options);
 		// Best-effort cache write; ignore errors
-		try { await writeMarketplaceCache(data, options); } catch {}
+		try {
+			await writeMarketplaceCache(data, options);
+		} catch {}
 		return data;
 	} catch (error) {
 		const cached = await readMarketplaceCache(options);
