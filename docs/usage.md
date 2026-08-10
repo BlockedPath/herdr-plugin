@@ -24,7 +24,8 @@ herdr-xray receipt verify receipt.json
 herdr-xray audit-installed my.plugin.id
 
 # Compare installed vs candidate (same tool/rules/limits for both)
-herdr-xray compare my.plugin.id owner/repo --ref <commit>
+herdr-xray compare my.plugin.id owner/repo --ref main
+# use a real commit to pin: --ref 1111111111111111111111111111111111111111 (no angle brackets)
 herdr-xray compare my.plugin.id ./candidate --format markdown --output review.md
 
 # Marketplace collisions

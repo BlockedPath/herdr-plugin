@@ -248,6 +248,9 @@ function validateOptionValue(option, value) {
 			return `${option} exceeds its hard maximum of ${numericLimits[option]}`;
 		}
 	}
+	if (option === "--ref" && /^<.*>$/.test(value)) {
+		return '--ref looks like a placeholder "<sha>"; use a real branch, tag, or 40-char commit without angle brackets (e.g. --ref main)';
+	}
 	if (option === "--ref" && (/\p{C}/u.test(value) || value.length > 512)) {
 		return "--ref contains control characters or exceeds 512 characters";
 	}
