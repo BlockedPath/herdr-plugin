@@ -76,7 +76,9 @@ async function withPair(run, options = {}) {
 			join(candidate, "run.mjs"),
 			options.candidateRun ?? "export const value = 1;\n",
 		);
-		for (const [name, content] of Object.entries(options.candidateFiles ?? {})) {
+		for (const [name, content] of Object.entries(
+			options.candidateFiles ?? {},
+		)) {
 			await writeFile(join(candidate, name), content);
 		}
 		await run({ installed, candidate });
@@ -88,7 +90,9 @@ async function withPair(run, options = {}) {
 
 async function comparePair(paths, options = {}) {
 	return await compareInstalled("example.compare", paths.candidate, {
-		plugins: parsePluginList(envelope(paths.installed, options.installedSource)),
+		plugins: parsePluginList(
+			envelope(paths.installed, options.installedSource),
+		),
 		...options.auditOptions,
 	});
 }
@@ -102,12 +106,18 @@ test("an unchanged candidate compares cleanly and stays schema-shaped", async ()
 			[],
 		);
 		assert.equal(receipt.completeness.dimensions.comparison.status, "complete");
-		assert.match(receipt.comparison.baselineAnalysisHash, /^sha256:[0-9a-f]{64}$/);
+		assert.match(
+			receipt.comparison.baselineAnalysisHash,
+			/^sha256:[0-9a-f]{64}$/,
+		);
 		assert.equal(
 			receipt.subject.installedBaseline.analysisHash,
 			receipt.comparison.baselineAnalysisHash,
 		);
-		assert.equal(receipt.subject.installedBaseline.plugin.id, "example.compare");
+		assert.equal(
+			receipt.subject.installedBaseline.plugin.id,
+			"example.compare",
+		);
 	});
 });
 
@@ -153,7 +163,8 @@ test("new automatic execution, network, and credential surfaces are reported", a
 			);
 			assert.equal(
 				receipt.comparison.changes.some(
-					(entry) => entry.kind === "reachable-file" && entry.change === "changed",
+					(entry) =>
+						entry.kind === "reachable-file" && entry.change === "changed",
 				),
 				true,
 			);
@@ -307,6 +318,59 @@ command = ["node", "run.mjs"]
 	);
 });
 
+test("platform scope expansion is reported as a high execution change", async () => {
+	const installedManifest = `
+id = "example.compare"
+name = "Compare fixture"
+version = "1.0.0"
+min_herdr_version = "0.8.0"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["node", "build.mjs"]
+platforms = ["linux"]
+
+[[actions]]
+id = "run"
+title = "Run"
+command = ["node", "run.mjs"]
+`;
+	const candidateManifest = `
+id = "example.compare"
+name = "Compare fixture"
+version = "1.0.0"
+min_herdr_version = "0.8.0"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["node", "build.mjs"]
+platforms = ["linux", "macos", "windows"]
+
+[[actions]]
+id = "run"
+title = "Run"
+command = ["node", "run.mjs"]
+`;
+	await withPair(
+		async (paths) => {
+			await writeFile(join(paths.installed, "herdr-plugin.toml"), installedManifest);
+			const receipt = await comparePair(paths);
+			assert.equal(
+				receipt.comparison.changes.some(
+					(entry) =>
+						entry.kind === "graph" &&
+						entry.change === "changed" &&
+						entry.severity === "high" &&
+						entry.subject.startsWith("trigger|build:"),
+				),
+				true,
+				JSON.stringify(receipt.comparison.changes),
+			);
+		},
+		{ candidateManifest },
+	);
+});
+
 test("manifest reordering does not invent execution changes", async () => {
 	const first = `
 id = "example.compare"
@@ -362,7 +426,10 @@ test("the change limit truncates instead of hiding an oversized diff", async () 
 				auditOptions: { limits: { comparisonChanges: 2 } },
 			});
 			assert.equal(receipt.comparison.changes.length, 2);
-			assert.equal(receipt.completeness.dimensions.comparison.status, "partial");
+			assert.equal(
+				receipt.completeness.dimensions.comparison.status,
+				"partial",
+			);
 			assert.equal(receipt.completeness.complete, false);
 			assert.equal(
 				receipt.completeness.dimensions.comparison.limit,

@@ -18,7 +18,8 @@ export function mergeComparison(baseline, candidate, options = {}) {
 	if (baseline.subject.plugin === null || candidate.subject.plugin === null) {
 		return withComparison(candidate, null, [], {
 			status: "unavailable",
-			reason: "Plugin identity was not parsed for both sides of the comparison.",
+			reason:
+				"Plugin identity was not parsed for both sides of the comparison.",
 			limit: null,
 		});
 	}
@@ -44,7 +45,10 @@ function withComparison(
 	const findings = dedupe([...candidate.findings, ...extraFindings]).sort(
 		(left, right) => left.id.localeCompare(right.id),
 	);
-	const dimensions = { ...candidate.completeness.dimensions, comparison: dimension };
+	const dimensions = {
+		...candidate.completeness.dimensions,
+		comparison: dimension,
+	};
 	const complete =
 		Object.values(dimensions).every((entry) => entry.status === "complete") &&
 		candidate.completeness.unstable === false;

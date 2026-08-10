@@ -3,7 +3,13 @@ import { RULES } from "./registry.mjs";
 
 const RULE_BY_ID = new Map(RULES.map((rule) => [rule.id, rule]));
 
-export function createFinding(ruleId, title, explanation, subject, evidence = {}) {
+export function createFinding(
+	ruleId,
+	title,
+	explanation,
+	subject,
+	evidence = {},
+) {
 	const rule = RULE_BY_ID.get(ruleId);
 	if (rule === undefined) {
 		throw new Error(`missing rule registration: ${ruleId}`);

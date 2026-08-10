@@ -113,8 +113,21 @@ function graphChanges(baseline, candidate) {
 	const before = nodeKeys(baseline);
 	const after = nodeKeys(candidate);
 	for (const [key, node] of after) {
-		if (before.has(key)) continue;
-		changes.push(change("graph", "added", key, addedNodeSeverity(node)));
+		const previous = before.get(key);
+		if (previous === undefined) {
+			changes.push(change("graph", "added", key, addedNodeSeverity(node)));
+			continue;
+		}
+		if (!platformsEqual(previous.effectivePlatforms, node.effectivePlatforms)) {
+			changes.push(
+				change(
+					"graph",
+					"changed",
+					`${key}: ${previous.effectivePlatforms.join(",")} -> ${node.effectivePlatforms.join(",")}`,
+					addedNodeSeverity(node),
+				),
+			);
+		}
 	}
 	for (const [key] of before) {
 		if (after.has(key)) continue;
@@ -122,11 +135,24 @@ function graphChanges(baseline, candidate) {
 	}
 	const beforeEdges = edgeKeys(baseline);
 	const afterEdges = edgeKeys(candidate);
-	for (const key of afterEdges) {
-		if (beforeEdges.has(key)) continue;
-		changes.push(change("graph", "added", key, "low"));
+	for (const [key, edge] of afterEdges) {
+		const previous = beforeEdges.get(key);
+		if (previous === undefined) {
+			changes.push(change("graph", "added", key, "low"));
+			continue;
+		}
+		if (!platformsEqual(previous.effectivePlatforms, edge.effectivePlatforms)) {
+			changes.push(
+				change(
+					"graph",
+					"changed",
+					`${key}: ${previous.effectivePlatforms.join(",")} -> ${edge.effectivePlatforms.join(",")}`,
+					"low",
+				),
+			);
+		}
 	}
-	for (const key of beforeEdges) {
+	for (const [key] of beforeEdges) {
 		if (afterEdges.has(key)) continue;
 		changes.push(change("graph", "removed", key, "info"));
 	}
@@ -215,20 +241,17 @@ function edgeKeys(receipt) {
 	const labels = new Map(
 		receipt.graph.nodes.map((node) => [node.id, `${node.type}|${node.label}`]),
 	);
-	return new Set(
-		receipt.graph.edges.map(
-			(edge) =>
-				`${edge.type}|${labels.get(edge.from) ?? edge.from}=>${labels.get(edge.to) ?? edge.to}`,
-		),
+	return new Map(
+		receipt.graph.edges.map((edge) => [
+			`${edge.type}|${labels.get(edge.from) ?? edge.from}=>${labels.get(edge.to) ?? edge.to}`,
+			edge,
+		]),
 	);
 }
 
 function findingKeys(receipt) {
 	return new Map(
-		receipt.findings.map((entry) => [
-			`${entry.ruleId}|${entry.title}`,
-			entry,
-		]),
+		receipt.findings.map((entry) => [`${entry.ruleId}|${entry.title}`, entry]),
 	);
 }
 
@@ -249,6 +272,11 @@ function change(kind, verb, subject, severity) {
 		subject: String(subject).slice(0, SUBJECT_MAX),
 		severity,
 	});
+}
+
+function platformsEqual(left, right) {
+	if (left.length !== right.length) return false;
+	return left.every((value, index) => value === right[index]);
 }
 
 function compareChanges(left, right) {
