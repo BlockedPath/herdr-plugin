@@ -123,7 +123,7 @@ function graphChanges(baseline, candidate) {
 				change(
 					"graph",
 					"changed",
-					`${key}: ${previous.effectivePlatforms.join(",")} -> ${node.effectivePlatforms.join(",")}`,
+					`${key}: ${formatPlatforms(previous.effectivePlatforms)} -> ${formatPlatforms(node.effectivePlatforms)}`,
 					addedNodeSeverity(node),
 				),
 			);
@@ -146,7 +146,7 @@ function graphChanges(baseline, candidate) {
 				change(
 					"graph",
 					"changed",
-					`${key}: ${previous.effectivePlatforms.join(",")} -> ${edge.effectivePlatforms.join(",")}`,
+					`${key}: ${formatPlatforms(previous.effectivePlatforms)} -> ${formatPlatforms(edge.effectivePlatforms)}`,
 					"low",
 				),
 			);
@@ -274,9 +274,21 @@ function change(kind, verb, subject, severity) {
 	});
 }
 
+function normalizePlatforms(value) {
+	if (!Array.isArray(value)) return [];
+	return [...value].sort();
+}
+
+function formatPlatforms(value) {
+	const normalized = normalizePlatforms(value);
+	return normalized.length === 0 ? "<none>" : normalized.join(",");
+}
+
 function platformsEqual(left, right) {
-	if (left.length !== right.length) return false;
-	return left.every((value, index) => value === right[index]);
+	const leftNormalized = normalizePlatforms(left);
+	const rightNormalized = normalizePlatforms(right);
+	if (leftNormalized.length !== rightNormalized.length) return false;
+	return leftNormalized.every((value, index) => value === rightNormalized[index]);
 }
 
 function compareChanges(left, right) {
